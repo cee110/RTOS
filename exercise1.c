@@ -37,9 +37,6 @@
 #include "driverlib/systick.h"
 #include "driverlib/interrupt.h"
 #include "utils/ustdlib.h"
-#include "driverlib/timer.h"
-#include "inc/hw_types.h"
-#include "inc/hw_ints.h"
 //*****************************************************************************
 //
 //! \addtogroup example_list
@@ -65,7 +62,7 @@
 void
 __error__(char *pcFilename, uint32_t ui32Line)
 {
-	UARTprintf("Library Error: line %d\n",ui32Line);
+    UARTprintf("Library Error: line %d\n",ui32Line);
 }
 #endif
 
@@ -73,27 +70,17 @@ __error__(char *pcFilename, uint32_t ui32Line)
 // The interrupt handler function.
 //
 extern void SysTickIntHandler(void);
-extern void Timer0IntHandler(void);
-extern void Timer1IntHandler(void);
-//*****************************************************************************
-//
-// Flags that contain the current value of the interrupt indicator as displayed
-// on the CSTN display.
-//
-//*****************************************************************************
-uint32_t g_ui32Flags;
+
 //*****************************************************************************
 //
 // Counter to count the number of interrupts that have been called.
 //
 //*****************************************************************************
 volatile uint32_t mytime = 0;
-uint32_t prevtime = 0;
-uint resolution = .000131;
+volatile uint32_t prevtime = 0;
+volatile uint resolution = 1000;
 uint32_t systick_period;
 tContext sContext;
-uint array[50];
-uint arrayptr = 0;
 //*****************************************************************************
 //
 // Configure the UART and its pins.  This must be called before UARTprintf().
@@ -137,7 +124,7 @@ ConfigureUART(void)
 void
 SysTickIntHandler(void)
 {
-//	mytime++;
+    mytime++;
 }
 
 //*****************************************************************************
@@ -147,54 +134,11 @@ SysTickIntHandler(void)
 //*****************************************************************************
 uint
 GetSysTime() {
-	//Convert tick count to time
-	uint tick = mytime * systick_period;
-	tick += systick_period - SysTickValueGet();
-	// one tick is 0.02us
-	return tick * 0.02;
-}
-//*****************************************************************************
-//
-// The interrupt handler for the first timer interrupt.
-//
-//*****************************************************************************
-void
-Timer0IntHandler(void)
-{
-	//Capture the entry time
-	array[arrayptr] = TimerValueGet(TIMER0_BASE, TIMER_A);
-	arrayptr++;
-	// If arrayptr = 50 disable all interrupts to stop timing
-	if (arrayptr == 50) IntMasterDisable();
-    //
-    // Clear the timer interrupt.
-    //
-    ROM_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-
-    //
-    // Toggle the flag for the first timer.
-    //
-    HWREGBITW(&g_ui32Flags, 0) ^= 1;
-    mytime++;
-}
-
-//*****************************************************************************
-//
-// The interrupt handler for the second timer interrupt.
-//
-//*****************************************************************************
-void
-Timer1IntHandler(void)
-{
-    //
-    // Clear the timer interrupt.
-    //
-    ROM_TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-
-    //
-    // Toggle the flag for the second timer.
-    //
-    HWREGBITW(&g_ui32Flags, 1) ^= 1;
+    //Convert tick count to time
+    uint tick = mytime * systick_period;
+    tick += systick_period - SysTickValueGet();
+    // one tick is 0.02us
+    return tick;// * 0.02;
 }
 //*****************************************************************************
 //
@@ -259,118 +203,79 @@ main(void)
                          GrContextDpyWidthGet(&sContext) / 2, 10, 0);
 
     //
+    // Say exercise1 using the Computer Modern 40 point font.
+    //
+//    GrContextFontSet(&sContext, g_psFontCm12/*g_psFontFixed6x8*/);
+//    GrStringDrawCentered(&sContext, "exercise1", -1,
+//                         GrContextDpyWidthGet(&sContext) / 2,
+//                         ((GrContextDpyHeightGet(&sContext) - 24) / 2) + 24,
+//                         0);
+
+    //
     // Flush any cached drawing operations.
     //
     GrFlush(&sContext);
 
-    // *******************************
-    //	Coursework Area Below!
-    // ********************************
-
-    //Register Interrupt Handlers
-    IntRegister(INT_TIMER0A, Timer0IntHandler);
-    IntRegister(INT_TIMER1A, Timer1IntHandler);
-    TimerIntRegister(TIMER0_BASE, TIMER_A, Timer0IntHandler);
-    TimerIntRegister(TIMER1_BASE, TIMER_A, Timer1IntHandler);
-    // Enable the timer peripherals.
-    //
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
-
-    //
-    // Configure the two 32-bit periodic timers.
-    //
-    ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
-    ROM_TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
-    ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, ROM_SysCtlClockGet()*.000023);
-    ROM_TimerLoadSet(TIMER1_BASE, TIMER_A, ROM_SysCtlClockGet()*.0001);
-
-	//
-    // Setup the interrupts for the timer timeouts.
-    //
-    ROM_IntEnable(INT_TIMER0A);
-    ROM_IntEnable(INT_TIMER1A);
-    ROM_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-    ROM_TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-
-    //
-    // Enable the timers.
-    //
-    ROM_TimerEnable(TIMER0_BASE, TIMER_A);
-    ROM_TimerEnable(TIMER1_BASE, TIMER_A);
-
     // Configure interrupt Handler
     // The SysTick and SysTick interrupt with a resolution of the system clock.
     //
-	// Initialize the interrupt counter.
-	//
-	mytime = 0;
-	//
-	// Register the interrupt handler function for SysTick.
-	//
-	SysTickIntRegister(SysTickIntHandler);
+    // Initialize the interrupt counter.
+    //
+    mytime = 0;
+    //
+    // Register the interrupt handler function for interrupt 5.
+    //
+    SysTickIntRegister(SysTickIntHandler);
 
-	//
-	// Set up the period for the SysTick timer(Resolution 1us).
-	//
-	systick_period = SysCtlClockGet()*resolution;
-	SysTickPeriodSet(systick_period);
+    //
+    // Set up the period for the SysTick timer(Resolution 1us).
+    //
+    systick_period = SysCtlClockGet()/resolution;
+    SysTickPeriodSet(systick_period);
 
-	//
-	// Enable interrupts to the processor.
-	//
-	IntMasterEnable();
+    //
+    // Enable interrupts to the processor.
+    //
+    IntMasterEnable();
 
-	//
-	// Enable the SysTick Interrupt.
-	//
-	SysTickIntEnable();
+    //
+    // Enable the SysTick Interrupt.
+    //
+    SysTickIntEnable();
 
-	//
-	// Enable SysTick.
-	//
-	SysTickEnable();
+    //
+    // Enable SysTick.
+    //
+    SysTickEnable();
+    char str[4];
+
+//  //Calculate time to output char on LCD
+    uint starttime = GetSysTime();
+    GrStringDraw(&sContext, "H", -1, 48, 46, 1);//881us
+    uint endtime = GetSysTime();
+
+    //Calculate time to output via UART
+//  uint interval = GetSysTime();
+//  UARTprintf("Hell"); // 8us for one char and 1/2us for any additional char
+//  interval = GetSysTime() - interval;
 
 
-	char str[4];
-	// *****
-	// Timer Test Area
-	// *****
-	/**
-	 * We need to calculate min, max and ave timer entry count.
-	 */
-
-
+    // Display results
+    usprintf(str, "%d",endtime-starttime);
+    ROM_IntMasterDisable();
+    GrStringDraw(&sContext, str, -1, 48,
+                 46, 1);
+    ROM_IntMasterEnable();
 
     while(1)
     {
-    	if (prevtime != mytime) {
-    		prevtime = mytime;
-    		usprintf(str, "%d",GetSysTime());
-			ROM_IntMasterDisable();
-			GrStringDraw(&sContext, str, -1, 48,
-						 46, 1);
-			ROM_IntMasterEnable();
-    	}
-    	// Calculate Min, Max and Ave Entry time
-    	if (arrayptr >= 50) {
-    		uint min = array[0], max = array[0];
-    		float ave = 0;
-    		for (int i = 0; i < 50; i++) {
-    			if (array[i] < min) min = array[i];
-    			if (array[i] > max) max = array[i];
-    			ave += array[i];
-    		}
-    		ave /= 50;
-    		char str1[5], str2[5], str3[5];
-    		usprintf(str1, "%d",min);
-    		usprintf(str2, "%d",max);
-    		usprintf(str3, "%f",ave);
-
-    		//Display results
-    		GrStringDraw(&sContext, str1, -1, 48, 22, 1);
-    		GrStringDraw(&sContext, str2, -1, 48, 34, 1);
-    		GrStringDraw(&sContext, str3, -1, 48, 46, 1);
-    	}
+//      if (prevtime != mytime) {
+//          prevtime = mytime;
+//          usprintf(str, "%d",GetSysTime());
+//          ROM_IntMasterDisable();
+//          GrStringDraw(&sContext, str, -1, 48,
+//                       46, 1);
+//          ROM_IntMasterEnable();
+//      }
     }
 }

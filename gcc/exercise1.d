@@ -25,6 +25,4 @@ gcc/exercise1.o: exercise1.c \
  /cygdrive/c\emsys\arm_eabi\lib\gcc\arm-none-eabi\4.8.1\include\stddef.h \
  /cygdrive/c\emsys\arm_eabi\arm-none-eabi\include\machine\time.h \
  /cygdrive/c\emsys\arm_eabi\arm-none-eabi\include\sys\types.h \
- /cygdrive/c\emsys\arm_eabi\arm-none-eabi\include\machine\types.h \
- ../../../../driverlib/timer.h ../../../../inc/hw_types.h \
- ../../../../inc/hw_ints.h
+ /cygdrive/c\emsys\arm_eabi\arm-none-eabi\include\machine\types.h
