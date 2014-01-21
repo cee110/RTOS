@@ -339,23 +339,23 @@ main(void)
 	/**
 	 * We need to calculate min, max and ave timer entry count.
 	 */
-
-
-
+	bool myswitch = 1;
     while(1)
     {
-    	if (prevtime != mytime) {
-    		prevtime = mytime;
-    		usprintf(str, "%d",GetSysTime());
-			ROM_IntMasterDisable();
-			GrStringDraw(&sContext, str, -1, 48,
-						 46, 1);
-			ROM_IntMasterEnable();
+    	if (myswitch){
+			if (prevtime != mytime) {
+				prevtime = mytime;
+				usprintf(str, "%d",GetSysTime());
+				ROM_IntMasterDisable();
+				GrStringDraw(&sContext, str, -1, 48,
+							 46, 1);
+				ROM_IntMasterEnable();
+			}
     	}
     	// Calculate Min, Max and Ave Entry time
-    	if (arrayptr >= 50) {
+    	if (arrayptr >= 50 && myswitch) {
     		uint min = array[0], max = array[0];
-    		float ave = 0;
+    		uint ave = 0;
     		for (int i = 0; i < 50; i++) {
     			if (array[i] < min) min = array[i];
     			if (array[i] > max) max = array[i];
@@ -365,12 +365,18 @@ main(void)
     		char str1[5], str2[5], str3[5];
     		usprintf(str1, "%d",min);
     		usprintf(str2, "%d",max);
-    		usprintf(str3, "%f",ave);
-
+    		usprintf(str3, "%d",ave);
+    		//Clear Display
+    		sRect.i16YMax = 63;
+			GrContextForegroundSet(&sContext, ClrBlack);
+			GrRectFill(&sContext, &sRect);
     		//Display results
+			GrContextForegroundSet(&sContext, ClrWhite);
     		GrStringDraw(&sContext, str1, -1, 48, 22, 1);
     		GrStringDraw(&sContext, str2, -1, 48, 34, 1);
     		GrStringDraw(&sContext, str3, -1, 48, 46, 1);
+    		myswitch = 0;//Display once
     	}
     }
 }
+// Latency is min 27clocks, max 1129 clocks, ave 898 clocks. I can not explain this.
