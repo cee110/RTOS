@@ -381,4 +381,10 @@ main(void)
     	}
     }
 }
-// Latency is min 27clocks, max 1129 clocks, ave 898 clocks. I can not explain this.
+/**
+ * Code explanation.
+ * When attempting to measure latency from timer 1 with period 23us,
+ * for a large critical foreground code, it doesn't work which is expected.
+ * For non critical code, latency min max ave are 34, 36, 34 clocks with is expected. Jitter is 2 clocks.
+ * However, timer is not the most accurate. A solution is to measure latency wrt to systick with is accurate to 1%.
+ */
