@@ -88,11 +88,10 @@ uint32_t g_ui32Flags;
 //
 //*****************************************************************************
 volatile uint32_t mytime = 0;
-uint32_t prevtime = 0;
 uint resolution = .000131;
 uint32_t systick_period;
-tContext sContext;
-volatile uint array[50];
+
+volatile uint array[51];
 volatile uint arrayptr = 0;
 //*****************************************************************************
 //
@@ -137,7 +136,7 @@ ConfigureUART(void)
 void
 SysTickIntHandler(void)
 {
-//	mytime++;
+	mytime++;
 }
 
 //*****************************************************************************
@@ -151,7 +150,7 @@ GetSysTime() {
 	uint tick = mytime * systick_period;
 	tick += systick_period - SysTickValueGet();
 	// one tick is 0.02us
-	return tick * 0.02;
+	return tick;
 }
 //*****************************************************************************
 //
@@ -162,10 +161,10 @@ void
 Timer0IntHandler(void)
 {
 	//Capture the entry time
-	array[arrayptr] = TimerValueGet(TIMER0_BASE, TIMER_A);
+	array[arrayptr] = GetSysTime();
 	arrayptr++;
 	// If arrayptr = 50 disable all interrupts to stop timing
-	if (arrayptr == 50) IntMasterDisable();
+	if (arrayptr == 51) IntMasterDisable();
     //
     // Clear the timer interrupt.
     //
@@ -175,7 +174,6 @@ Timer0IntHandler(void)
     // Toggle the flag for the first timer.
     //
     HWREGBITW(&g_ui32Flags, 0) ^= 1;
-    mytime++;
 }
 
 //*****************************************************************************
@@ -233,6 +231,7 @@ main(void)
     //
     // Initialize the graphics context.
     //
+    tContext sContext;
     GrContextInit(&sContext, &g_sCFAL96x64x16);
 
     //
@@ -333,6 +332,7 @@ main(void)
 
 
 	char str[4];
+	uint32_t prevtime = 0;
 	// *****
 	// Timer Test Area
 	// *****
@@ -352,15 +352,19 @@ main(void)
 //				ROM_IntMasterEnable();
 //			}
 //    	}
-    	// Calculate Min, Max and Ave Entry time
-    	if (arrayptr >= 50 && myswitch) {
-    		uint min = array[0], max = array[0];
+    	// Calculate Min, Max and Ave Jitter time
+    	if (arrayptr >= 51 && myswitch) {
+    		uint timer0period = TimerLoadGet(TIMER0_BASE, TIMER_A);
+    		uint min = abs(array[0]-array[1] - timer0period), max = min;
     		uint ave = 0;
-    		for (int i = 0; i < 50; i++) {
-    			if (array[i] < min) min = array[i];
-    			if (array[i] > max) max = array[i];
-    			ave += array[i];
+
+    		for (int i = 1; i < 51; i++) {
+    			uint temp = abs(array[i] - array[i-1] - timer0period);
+    			if (temp < min) min = temp;
+    			if (temp > max) max = temp;
+    			ave += temp;
     		}
+
     		ave /= 50;
     		char str1[5], str2[5], str3[5];
     		usprintf(str1, "%d",min);
