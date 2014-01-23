@@ -92,8 +92,8 @@ uint32_t prevtime = 0;
 uint resolution = .000131;
 uint32_t systick_period;
 tContext sContext;
-uint array[50];
-uint arrayptr = 0;
+volatile uint array[50];
+volatile uint arrayptr = 0;
 //*****************************************************************************
 //
 // Configure the UART and its pins.  This must be called before UARTprintf().
@@ -280,8 +280,8 @@ main(void)
     //
     // Configure the two 32-bit periodic timers.
     //
-    ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
-    ROM_TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
+    ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC_UP);
+    ROM_TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC_UP);
     ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, ROM_SysCtlClockGet()*.000023);
     ROM_TimerLoadSet(TIMER1_BASE, TIMER_A, ROM_SysCtlClockGet()*.0001);
 
@@ -342,16 +342,16 @@ main(void)
 	bool myswitch = 1;
     while(1)
     {
-    	if (myswitch){
-			if (prevtime != mytime) {
-				prevtime = mytime;
-				usprintf(str, "%d",GetSysTime());
-				ROM_IntMasterDisable();
-				GrStringDraw(&sContext, str, -1, 48,
-							 46, 1);
-				ROM_IntMasterEnable();
-			}
-    	}
+//    	if (myswitch){
+//			if (prevtime != mytime) {
+//				prevtime = mytime;
+//				usprintf(str, "%d",GetSysTime());
+//				ROM_IntMasterDisable();
+//				GrStringDraw(&sContext, str, -1, 48,
+//							 46, 1);
+//				ROM_IntMasterEnable();
+//			}
+//    	}
     	// Calculate Min, Max and Ave Entry time
     	if (arrayptr >= 50 && myswitch) {
     		uint min = array[0], max = array[0];
@@ -372,9 +372,11 @@ main(void)
 			GrRectFill(&sContext, &sRect);
     		//Display results
 			GrContextForegroundSet(&sContext, ClrWhite);
+			ROM_IntMasterDisable();
     		GrStringDraw(&sContext, str1, -1, 48, 22, 1);
     		GrStringDraw(&sContext, str2, -1, 48, 34, 1);
     		GrStringDraw(&sContext, str3, -1, 48, 46, 1);
+    		ROM_IntMasterEnable();
     		myswitch = 0;//Display once
     	}
     }
