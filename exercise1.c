@@ -78,7 +78,7 @@ extern void SysTickIntHandler(void);
 //*****************************************************************************
 volatile uint32_t mytime = 0;
 volatile uint32_t prevtime = 0;
-volatile uint resolution = 1000;
+uint resolution = 1000;
 uint32_t systick_period;
 tContext sContext;
 //*****************************************************************************
@@ -135,8 +135,8 @@ SysTickIntHandler(void)
 uint
 GetSysTime() {
     //Convert tick count to time
-    uint tick = mytime * systick_period;
-    tick += systick_period - SysTickValueGet();
+    uint tick = (mytime + 1) * systick_period;
+    tick -= SysTickValueGet();
     // one tick is 0.02us
     return tick;// * 0.02;
 }
@@ -250,14 +250,21 @@ main(void)
     char str[4];
 
 //  //Calculate time to output char on LCD
-    uint starttime = GetSysTime();
-    GrStringDraw(&sContext, "H", -1, 48, 46, 1);//881us
-    uint endtime = GetSysTime();
+//    uint starttime = GetSysTime();
+//    GrStringDraw(&sContext, "H", -1, 48, 46, 1);//881us, 43902ticks
+//    uint endtime = GetSysTime();
 
     //Calculate time to output via UART
-//  uint interval = GetSysTime();
-//  UARTprintf("Hell"); // 8us for one char and 1/2us for any additional char
-//  interval = GetSysTime() - interval;
+    // 242ticks for one char, 50 ticks for additional char.
+    /** Uart uses 16 byte buffer i.e 16 char fifo buffer.
+     * each stage of the pipeline takes 50 clocks.
+     * The first 17 chars take 1042 i.e 242 + 50*16 clocks
+     * 18th char takes an additional 3356. This time is used by the fifo
+     * which shows busy while it empties. Why first 17 not 16?
+     */
+  uint starttime = GetSysTime();
+  UARTprintf("Helliaqwuerting0r");
+  uint endtime = GetSysTime();
 
 
     // Display results
