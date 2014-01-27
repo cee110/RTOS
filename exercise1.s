@@ -6,6 +6,10 @@ Ltext0:
 	.align 4
 _mytime:
 	.space 4
+	.globl	_testime
+	.align 4
+_testime:
+	.space 4
 	.globl	_prevtime
 	.align 4
 _prevtime:
@@ -23,7 +27,7 @@ _resolution:
 _ConfigureUART:
 LFB6:
 	.file 1 "exercise1.c"
-	.loc 1 91 0
+	.loc 1 92 0
 	.cfi_startproc
 	pushl	%ebp
 	.cfi_def_cfa_offset 8
@@ -31,55 +35,83 @@ LFB6:
 	movl	%esp, %ebp
 	.cfi_def_cfa_register 5
 	subl	$24, %esp
-	.loc 1 95 0
+	.loc 1 96 0
 	movl	$-268433408, (%esp)
 	call	_ROM_SysCtlPeripheralEnable
-	.loc 1 100 0
+	.loc 1 101 0
 	movl	$-268429312, (%esp)
 	call	_ROM_SysCtlPeripheralEnable
-	.loc 1 105 0
+	.loc 1 106 0
 	movl	$1, (%esp)
 	call	_ROM_GPIOPinConfigure
-	.loc 1 106 0
+	.loc 1 107 0
 	movl	$1025, (%esp)
 	call	_ROM_GPIOPinConfigure
-	.loc 1 107 0
+	.loc 1 108 0
 	movl	$3, 4(%esp)
 	movl	$1073758208, (%esp)
 	call	_ROM_GPIOPinTypeUART
-	.loc 1 112 0
+	.loc 1 113 0
 	movl	$5, 4(%esp)
 	movl	$1073790976, (%esp)
 	call	_UARTClockSourceSet
-	.loc 1 117 0
+	.loc 1 118 0
 	movl	$16000000, 8(%esp)
 	movl	$115200, 4(%esp)
 	movl	$0, (%esp)
 	call	_UARTStdioConfig
-	.loc 1 118 0
+	.loc 1 119 0
 	leave
 	.cfi_restore 5
 	.cfi_def_cfa 4, 4
 	ret
 	.cfi_endproc
 LFE6:
+	.section .rdata,"dr"
+LC0:
+	.ascii "%d\0"
+	.text
 	.globl	_SysTickIntHandler
 	.def	_SysTickIntHandler;	.scl	2;	.type	32;	.endef
 _SysTickIntHandler:
 LFB7:
-	.loc 1 126 0
+	.loc 1 127 0
 	.cfi_startproc
-	pushl	%ebtp
+	pushl	%ebp
 	.cfi_def_cfa_offset 8
 	.cfi_offset 5, -8
 	movl	%esp, %ebp
 	.cfi_def_cfa_register 5
-	.loc 1 127 0
+	subl	$56, %esp
+	.loc 1 128 0
 	movl	_mytime, %eax
 	addl	$1, %eax
 	movl	%eax, _mytime
-	.loc 1 128 0
-	popl	%ebp
+	.loc 1 129 0
+	call	_SysTickValueGet
+	movl	%eax, _testime
+	.loc 1 130 0
+	call	_SysTickDisable
+	.loc 1 132 0
+	movl	_testime, %eax
+	movl	%eax, 8(%esp)
+	movl	$LC0, 4(%esp)
+	leal	-12(%ebp), %eax
+	movl	%eax, (%esp)
+	call	_usprintf
+	.loc 1 133 0
+	call	_ROM_IntMasterDisable
+	.loc 1 134 0
+	movl	$1, 20(%esp)
+	movl	$46, 16(%esp)
+	movl	$48, 12(%esp)
+	movl	$-1, 8(%esp)
+	leal	-12(%ebp), %eax
+	movl	%eax, 4(%esp)
+	movl	$_sContext, (%esp)
+	call	_GrStringDraw
+	.loc 1 136 0
+	leave
 	.cfi_restore 5
 	.cfi_def_cfa 4, 4
 	ret
@@ -89,7 +121,7 @@ LFE7:
 	.def	_GetSysTime;	.scl	2;	.type	32;	.endef
 _GetSysTime:
 LFB8:
-	.loc 1 136 0
+	.loc 1 144 0
 	.cfi_startproc
 	pushl	%ebp
 	.cfi_def_cfa_offset 8
@@ -97,18 +129,18 @@ LFB8:
 	movl	%esp, %ebp
 	.cfi_def_cfa_register 5
 	subl	$24, %esp
-	.loc 1 138 0
+	.loc 1 146 0
 	movl	_mytime, %eax
 	leal	1(%eax), %edx
 	movl	_systick_period, %eax
 	imull	%edx, %eax
 	movl	%eax, -12(%ebp)
-	.loc 1 139 0
+	.loc 1 147 0
 	call	_SysTickValueGet
 	subl	%eax, -12(%ebp)
-	.loc 1 141 0
+	.loc 1 149 0
 	movl	-12(%ebp), %eax
-	.loc 1 142 0
+	.loc 1 150 0
 	leave
 	.cfi_restore 5
 	.cfi_def_cfa 4, 4
@@ -117,20 +149,18 @@ LFB8:
 LFE8:
 	.def	___main;	.scl	2;	.type	32;	.endef
 	.section .rdata,"dr"
-LC0:
-	.ascii "exercise1, world!\12\0"
 LC1:
-	.ascii "exercise1\0"
+	.ascii "exercise1, world!\12\0"
 LC2:
-	.ascii "Helliaqwuerting0r\0"
+	.ascii "exercise1\0"
 LC3:
-	.ascii "%d\0"
+	.ascii "Helliaqwuerting0r\0"
 	.text
 	.globl	_main
 	.def	_main;	.scl	2;	.type	32;	.endef
 _main:
 LFB9:
-	.loc 1 150 0
+	.loc 1 158 0
 	.cfi_startproc
 	pushl	%ebp
 	.cfi_def_cfa_offset 8
@@ -140,87 +170,87 @@ LFB9:
 	pushl	%esi
 	pushl	%ebx
 	andl	$-16, %esp
-	subl	$80, %esp
+	subl	$64, %esp
 	.cfi_offset 6, -12
 	.cfi_offset 3, -16
-	.loc 1 150 0
+	.loc 1 158 0
 	call	___main
-	.loc 1 157 0
+	.loc 1 165 0
 	call	_ROM_FPULazyStackingEnable
-	.loc 1 162 0
+	.loc 1 170 0
 	movl	$29361472, (%esp)
 	call	_ROM_SysCtlClockSet
-	.loc 1 168 0
+	.loc 1 176 0
 	call	_ConfigureUART
-	.loc 1 170 0
-	movl	$LC0, (%esp)
+	.loc 1 178 0
+	movl	$LC1, (%esp)
 	call	_UARTprintf
-	.loc 1 175 0
+	.loc 1 183 0
 	call	_CFAL96x64x16Init
-	.loc 1 180 0
+	.loc 1 188 0
 	movl	$_g_sCFAL96x64x16, 4(%esp)
 	movl	$_sContext, (%esp)
 	call	_GrContextInit
-	.loc 1 185 0
-	movw	$0, 40(%esp)
-	.loc 1 186 0
-	movw	$0, 42(%esp)
-	.loc 1 187 0
+	.loc 1 193 0
+	movw	$0, 32(%esp)
+	.loc 1 194 0
+	movw	$0, 34(%esp)
+	.loc 1 195 0
 	movl	_sContext+4, %eax
 	movzwl	8(%eax), %eax
 	subl	$1, %eax
-	movw	%ax, 44(%esp)
-	.loc 1 188 0
-	movw	$23, 46(%esp)
+	movw	%ax, 36(%esp)
+	.loc 1 196 0
+	movw	$23, 38(%esp)
 LBB2:
-	.loc 1 189 0
-	movl	$_sContext, 76(%esp)
-	movl	76(%esp), %eax
+	.loc 1 197 0
+	movl	$_sContext, 60(%esp)
+	movl	60(%esp), %eax
 	movl	4(%eax), %eax
 	movl	32(%eax), %eax
-	movl	76(%esp), %edx
+	movl	60(%esp), %edx
 	movl	4(%edx), %edx
 	movl	4(%edx), %edx
 	movl	$139, 4(%esp)
 	movl	%edx, (%esp)
 	call	*%eax
-	movl	76(%esp), %edx
+	movl	60(%esp), %edx
 	movl	%eax, 16(%edx)
 LBE2:
-	.loc 1 190 0
-	leal	40(%esp), %eax
+	.loc 1 198 0
+	leal	32(%esp), %eax
 	movl	%eax, 4(%esp)
 	movl	$_sContext, (%esp)
 	call	_GrRectFill
 LBB3:
-	.loc 1 195 0
-	movl	$_sContext, 72(%esp)
-	movl	72(%esp), %eax
+	.loc 1 203 0
+	movl	$_sContext, 56(%esp)
+	movl	56(%esp), %eax
 	movl	4(%eax), %eax
 	movl	32(%eax), %eax
-	movl	72(%esp), %edx
+	movl	56(%esp), %edx
 	movl	4(%edx), %edx
 	movl	4(%edx), %edx
 	movl	$16777215, 4(%esp)
 	movl	%edx, (%esp)
 	call	*%eax
-	movl	72(%esp), %edx
+	movl	56(%esp), %edx
 	movl	%eax, 16(%edx)
 LBE3:
-	.loc 1 196 0
-	leal	40(%esp), %eax
+	.loc 1 204 0
+	leal	32(%esp), %eax
 	movl	%eax, 4(%esp)
 	movl	$_sContext, (%esp)
 	call	_GrRectDraw
-	.loc 1 201 0
+	.loc 1 209 0
 	movl	$_g_sFontCm12, 4(%esp)
 	movl	$_sContext, (%esp)
 	call	_GrContextFontSet
 LBB4:
-	.loc 1 202 0
-	movl	$_sContext, 68(%esp)
-	movl	$LC1, 64(%esp)
-	movl	68(%esp), %eax
+	.loc 1 210 0
+	movl	$_sContext, 52(%esp)
+	movl	$LC2, 48(%esp)
+	movl	52(%esp), %eax
 	movl	24(%eax), %eax
 	movl	%eax, (%esp)
 	call	_GrFontBaselineGet
@@ -234,9 +264,9 @@ LBB4:
 	shrw	%ax
 	movzwl	%ax, %esi
 	movl	$-1, 8(%esp)
-	movl	64(%esp), %eax
+	movl	48(%esp), %eax
 	movl	%eax, 4(%esp)
-	movl	68(%esp), %eax
+	movl	52(%esp), %eax
 	movl	%eax, (%esp)
 	call	_GrStringWidthGet
 	movl	%eax, %edx
@@ -249,82 +279,53 @@ LBB4:
 	movl	%ebx, 16(%esp)
 	movl	%eax, 12(%esp)
 	movl	$-1, 8(%esp)
-	movl	64(%esp), %eax
+	movl	48(%esp), %eax
 	movl	%eax, 4(%esp)
-	movl	68(%esp), %eax
+	movl	52(%esp), %eax
 	movl	%eax, (%esp)
 	call	_GrStringDraw
 LBE4:
 LBB5:
-	.loc 1 217 0
-	movl	$_sContext, 60(%esp)
+	.loc 1 225 0
+	movl	$_sContext, 44(%esp)
 LBB6:
-	movl	60(%esp), %eax
+	movl	44(%esp), %eax
 	movl	4(%eax), %eax
-	movl	%eax, 56(%esp)
-	movl	56(%esp), %eax
+	movl	%eax, 40(%esp)
+	movl	40(%esp), %eax
 	movl	36(%eax), %eax
-	movl	56(%esp), %edx
+	movl	40(%esp), %edx
 	movl	4(%edx), %edx
 	movl	%edx, (%esp)
 	call	*%eax
 LBE6:
 LBE5:
-	.loc 1 224 0
+	.loc 1 232 0
 	movl	$0, _mytime
-	.loc 1 228 0
+	.loc 1 236 0
 	movl	$_SysTickIntHandler, (%esp)
 	call	_SysTickIntRegister
-	.loc 1 233 0
+	.loc 1 241 0
 	call	_SysCtlClockGet
 	movl	_resolution, %ecx
 	movl	$0, %edx
 	divl	%ecx
 	movl	%eax, _systick_period
-	.loc 1 234 0
+	.loc 1 242 0
 	movl	_systick_period, %eax
 	movl	%eax, (%esp)
 	call	_SysTickPeriodSet
-	.loc 1 239 0
+	.loc 1 247 0
 	call	_IntMasterEnable
-	.loc 1 244 0
+	.loc 1 252 0
 	call	_SysTickIntEnable
-	.loc 1 249 0
+	.loc 1 257 0
 	call	_SysTickEnable
-	.loc 1 265 0
-	call	_GetSysTime
-	movl	%eax, 52(%esp)
-	.loc 1 266 0
-	movl	$LC2, (%esp)
+	.loc 1 274 0
+	movl	$LC3, (%esp)
 	call	_UARTprintf
-	.loc 1 267 0
-	call	_GetSysTime
-	movl	%eax, 48(%esp)
-	.loc 1 271 0
-	movl	52(%esp), %eax
-	movl	48(%esp), %edx
-	subl	%eax, %edx
-	movl	%edx, %eax
-	movl	%eax, 8(%esp)
-	movl	$LC3, 4(%esp)
-	leal	36(%esp), %eax
-	movl	%eax, (%esp)
-	call	_usprintf
-	.loc 1 272 0
-	call	_ROM_IntMasterDisable
-	.loc 1 273 0
-	movl	$1, 20(%esp)
-	movl	$46, 16(%esp)
-	movl	$48, 12(%esp)
-	movl	$-1, 8(%esp)
-	leal	36(%esp), %eax
-	movl	%eax, 4(%esp)
-	movl	$_sContext, (%esp)
-	call	_GrStringDraw
-	.loc 1 275 0
-	call	_ROM_IntMasterEnable
 L6:
-	.loc 1 287 0 discriminator 1
+	.loc 1 295 0 discriminator 1
 	jmp	L6
 	.cfi_endproc
 LFE9:
@@ -335,7 +336,7 @@ Letext0:
 	.file 5 "../drivers/cfal96x64x16.h"
 	.section	.debug_info,"dr"
 Ldebug_info0:
-	.long	0x9af
+	.long	0x976
 	.word	0x4
 	.secrel32	Ldebug_abbrev0
 	.byte	0x4
@@ -865,7 +866,7 @@ Ldebug_info0:
 	.uleb128 0x12
 	.ascii "ConfigureUART\0"
 	.byte	0x1
-	.byte	0x5a
+	.byte	0x5b
 	.long	LFB6
 	.long	LFE6-LFB6
 	.uleb128 0x1
@@ -874,7 +875,7 @@ Ldebug_info0:
 	.uleb128 0x13
 	.ascii "ROM_SysCtlPeripheralEnable\0"
 	.byte	0x1
-	.byte	0x5f
+	.byte	0x60
 	.long	0xca
 	.long	0x6de
 	.uleb128 0x14
@@ -882,7 +883,7 @@ Ldebug_info0:
 	.uleb128 0x13
 	.ascii "ROM_GPIOPinConfigure\0"
 	.byte	0x1
-	.byte	0x69
+	.byte	0x6a
 	.long	0xca
 	.long	0x700
 	.uleb128 0x14
@@ -890,247 +891,232 @@ Ldebug_info0:
 	.uleb128 0x15
 	.ascii "ROM_GPIOPinTypeUART\0"
 	.byte	0x1
-	.byte	0x6b
+	.byte	0x6c
 	.long	0xca
 	.uleb128 0x14
 	.byte	0
 	.byte	0
-	.uleb128 0x16
+	.uleb128 0x12
 	.ascii "SysTickIntHandler\0"
 	.byte	0x1
-	.byte	0x7d
+	.byte	0x7e
 	.long	LFB7
 	.long	LFE7-LFB7
 	.uleb128 0x1
 	.byte	0x9c
+	.long	0x76e
+	.uleb128 0x16
+	.ascii "str\0"
+	.byte	0x1
+	.byte	0x83
+	.long	0x76e
+	.uleb128 0x2
+	.byte	0x91
+	.sleb128 -20
+	.uleb128 0x15
+	.ascii "ROM_IntMasterDisable\0"
+	.byte	0x1
+	.byte	0x85
+	.long	0xca
+	.uleb128 0x14
+	.byte	0
+	.byte	0
+	.uleb128 0xc
+	.long	0x4b1
+	.long	0x77e
+	.uleb128 0xd
+	.long	0x41d
+	.byte	0x3
+	.byte	0
 	.uleb128 0x17
 	.ascii "GetSysTime\0"
 	.byte	0x1
-	.byte	0x88
+	.byte	0x90
 	.long	0x68b
 	.long	LFB8
 	.long	LFE8-LFB8
 	.uleb128 0x1
 	.byte	0x9c
-	.long	0x76d
-	.uleb128 0x18
+	.long	0x7ae
+	.uleb128 0x16
 	.ascii "tick\0"
 	.byte	0x1
-	.byte	0x8a
+	.byte	0x92
 	.long	0x68b
 	.uleb128 0x2
 	.byte	0x91
 	.sleb128 -20
 	.byte	0
-	.uleb128 0x19
+	.uleb128 0x18
 	.ascii "main\0"
 	.byte	0x1
-	.byte	0x95
+	.byte	0x9d
 	.long	0xca
 	.long	LFB9
 	.long	LFE9-LFB9
 	.uleb128 0x1
 	.byte	0x9c
-	.long	0x8ed
-	.uleb128 0x18
+	.long	0x8af
+	.uleb128 0x16
 	.ascii "sRect\0"
 	.byte	0x1
-	.byte	0x97
+	.byte	0x9f
 	.long	0x1ab
 	.uleb128 0x2
 	.byte	0x74
-	.sleb128 40
+	.sleb128 32
 	.uleb128 0x13
 	.ascii "ROM_FPULazyStackingEnable\0"
 	.byte	0x1
-	.byte	0x9d
+	.byte	0xa5
 	.long	0xca
-	.long	0x7be
+	.long	0x7ff
 	.uleb128 0x14
 	.byte	0
 	.uleb128 0x13
 	.ascii "ROM_SysCtlClockSet\0"
 	.byte	0x1
-	.byte	0xa2
+	.byte	0xaa
 	.long	0xca
-	.long	0x7de
+	.long	0x81f
 	.uleb128 0x14
 	.byte	0
-	.uleb128 0x18
-	.ascii "str\0"
-	.byte	0x1
-	.byte	0xfa
-	.long	0x8ed
-	.uleb128 0x2
-	.byte	0x74
-	.sleb128 36
-	.uleb128 0x1a
-	.ascii "starttime\0"
-	.byte	0x1
-	.word	0x109
-	.long	0x68b
-	.uleb128 0x2
-	.byte	0x74
-	.sleb128 52
-	.uleb128 0x1a
-	.ascii "endtime\0"
-	.byte	0x1
-	.word	0x10b
-	.long	0x68b
-	.uleb128 0x2
-	.byte	0x74
-	.sleb128 48
-	.uleb128 0x1b
-	.ascii "ROM_IntMasterDisable\0"
-	.byte	0x1
-	.word	0x110
-	.long	0xca
-	.long	0x837
-	.uleb128 0x14
-	.byte	0
-	.uleb128 0x1b
-	.ascii "ROM_IntMasterEnable\0"
-	.byte	0x1
-	.word	0x113
-	.long	0xca
-	.long	0x859
-	.uleb128 0x14
-	.byte	0
-	.uleb128 0x1c
+	.uleb128 0x19
 	.long	LBB2
 	.long	LBE2-LBB2
-	.long	0x875
-	.uleb128 0x18
+	.long	0x83a
+	.uleb128 0x16
 	.ascii "pC\0"
 	.byte	0x1
-	.byte	0xbd
-	.long	0x8fd
-	.uleb128 0x3
-	.byte	0x74
-	.sleb128 76
-	.byte	0
-	.uleb128 0x1c
-	.long	LBB3
-	.long	LBE3-LBB3
-	.long	0x891
-	.uleb128 0x18
-	.ascii "pC\0"
-	.byte	0x1
-	.byte	0xc3
-	.long	0x8fd
-	.uleb128 0x3
-	.byte	0x74
-	.sleb128 72
-	.byte	0
-	.uleb128 0x1c
-	.long	LBB4
-	.long	LBE4-LBB4
-	.long	0x8be
-	.uleb128 0x18
-	.ascii "pC\0"
-	.byte	0x1
-	.byte	0xca
-	.long	0x903
-	.uleb128 0x3
-	.byte	0x74
-	.sleb128 68
-	.uleb128 0x18
-	.ascii "pcStr\0"
-	.byte	0x1
-	.byte	0xca
-	.long	0x4a6
-	.uleb128 0x3
-	.byte	0x74
-	.sleb128 64
-	.byte	0
-	.uleb128 0x1d
-	.long	LBB5
-	.long	LBE5-LBB5
-	.uleb128 0x18
-	.ascii "pC\0"
-	.byte	0x1
-	.byte	0xd9
-	.long	0x903
+	.byte	0xc5
+	.long	0x8af
 	.uleb128 0x2
 	.byte	0x74
 	.sleb128 60
-	.uleb128 0x1d
-	.long	LBB6
-	.long	LBE6-LBB6
-	.uleb128 0x18
-	.ascii "pD\0"
+	.byte	0
+	.uleb128 0x19
+	.long	LBB3
+	.long	LBE3-LBB3
+	.long	0x855
+	.uleb128 0x16
+	.ascii "pC\0"
 	.byte	0x1
-	.byte	0xd9
-	.long	0x638
+	.byte	0xcb
+	.long	0x8af
 	.uleb128 0x2
 	.byte	0x74
 	.sleb128 56
 	.byte	0
+	.uleb128 0x19
+	.long	LBB4
+	.long	LBE4-LBB4
+	.long	0x880
+	.uleb128 0x16
+	.ascii "pC\0"
+	.byte	0x1
+	.byte	0xd2
+	.long	0x8b5
+	.uleb128 0x2
+	.byte	0x74
+	.sleb128 52
+	.uleb128 0x16
+	.ascii "pcStr\0"
+	.byte	0x1
+	.byte	0xd2
+	.long	0x4a6
+	.uleb128 0x2
+	.byte	0x74
+	.sleb128 48
+	.byte	0
+	.uleb128 0x1a
+	.long	LBB5
+	.long	LBE5-LBB5
+	.uleb128 0x16
+	.ascii "pC\0"
+	.byte	0x1
+	.byte	0xe1
+	.long	0x8b5
+	.uleb128 0x2
+	.byte	0x74
+	.sleb128 44
+	.uleb128 0x1a
+	.long	LBB6
+	.long	LBE6-LBB6
+	.uleb128 0x16
+	.ascii "pD\0"
+	.byte	0x1
+	.byte	0xe1
+	.long	0x638
+	.uleb128 0x2
+	.byte	0x74
+	.sleb128 40
 	.byte	0
 	.byte	0
-	.uleb128 0xc
-	.long	0x4b1
-	.long	0x8fd
-	.uleb128 0xd
-	.long	0x41d
-	.byte	0x3
 	.byte	0
 	.uleb128 0x9
 	.byte	0x4
 	.long	0x659
 	.uleb128 0x9
 	.byte	0x4
-	.long	0x909
+	.long	0x8bb
 	.uleb128 0xa
 	.long	0x659
-	.uleb128 0x1e
+	.uleb128 0x1b
 	.ascii "g_sFontCm12\0"
 	.byte	0x3
 	.word	0x5db
 	.long	0x649
-	.uleb128 0x1f
+	.uleb128 0x1c
 	.ascii "g_sCFAL96x64x16\0"
 	.byte	0x5
 	.byte	0x23
 	.long	0x63e
-	.uleb128 0x20
+	.uleb128 0x1d
 	.ascii "mytime\0"
 	.byte	0x1
 	.byte	0x4f
-	.long	0x94d
+	.long	0x8ff
 	.uleb128 0x5
 	.byte	0x3
 	.long	_mytime
-	.uleb128 0x21
+	.uleb128 0x1e
 	.long	0x128
-	.uleb128 0x20
-	.ascii "prevtime\0"
+	.uleb128 0x1d
+	.ascii "testime\0"
 	.byte	0x1
 	.byte	0x50
-	.long	0x94d
+	.long	0x8ff
+	.uleb128 0x5
+	.byte	0x3
+	.long	_testime
+	.uleb128 0x1d
+	.ascii "prevtime\0"
+	.byte	0x1
+	.byte	0x51
+	.long	0x8ff
 	.uleb128 0x5
 	.byte	0x3
 	.long	_prevtime
-	.uleb128 0x20
+	.uleb128 0x1d
 	.ascii "resolution\0"
 	.byte	0x1
-	.byte	0x51
+	.byte	0x52
 	.long	0x68b
 	.uleb128 0x5
 	.byte	0x3
 	.long	_resolution
-	.uleb128 0x20
+	.uleb128 0x1d
 	.ascii "systick_period\0"
 	.byte	0x1
-	.byte	0x52
+	.byte	0x53
 	.long	0x128
 	.uleb128 0x5
 	.byte	0x3
 	.long	_systick_period
-	.uleb128 0x20
+	.uleb128 0x1d
 	.ascii "sContext\0"
 	.byte	0x1
-	.byte	0x53
+	.byte	0x54
 	.long	0x659
 	.uleb128 0x5
 	.byte	0x3
@@ -1400,26 +1386,18 @@ Ldebug_abbrev0:
 	.byte	0
 	.byte	0
 	.uleb128 0x16
-	.uleb128 0x2e
+	.uleb128 0x34
 	.byte	0
-	.uleb128 0x3f
-	.uleb128 0x19
 	.uleb128 0x3
 	.uleb128 0x8
 	.uleb128 0x3a
 	.uleb128 0xb
 	.uleb128 0x3b
 	.uleb128 0xb
-	.uleb128 0x27
-	.uleb128 0x19
-	.uleb128 0x11
-	.uleb128 0x1
-	.uleb128 0x12
-	.uleb128 0x6
-	.uleb128 0x40
+	.uleb128 0x49
+	.uleb128 0x13
+	.uleb128 0x2
 	.uleb128 0x18
-	.uleb128 0x2117
-	.uleb128 0x19
 	.byte	0
 	.byte	0
 	.uleb128 0x17
@@ -1448,21 +1426,6 @@ Ldebug_abbrev0:
 	.byte	0
 	.byte	0
 	.uleb128 0x18
-	.uleb128 0x34
-	.byte	0
-	.uleb128 0x3
-	.uleb128 0x8
-	.uleb128 0x3a
-	.uleb128 0xb
-	.uleb128 0x3b
-	.uleb128 0xb
-	.uleb128 0x49
-	.uleb128 0x13
-	.uleb128 0x2
-	.uleb128 0x18
-	.byte	0
-	.byte	0
-	.uleb128 0x19
 	.uleb128 0x2e
 	.byte	0x1
 	.uleb128 0x3f
@@ -1489,26 +1452,29 @@ Ldebug_abbrev0:
 	.uleb128 0x13
 	.byte	0
 	.byte	0
-	.uleb128 0x1a
-	.uleb128 0x34
-	.byte	0
-	.uleb128 0x3
-	.uleb128 0x8
-	.uleb128 0x3a
+	.uleb128 0x19
 	.uleb128 0xb
-	.uleb128 0x3b
-	.uleb128 0x5
-	.uleb128 0x49
+	.byte	0x1
+	.uleb128 0x11
+	.uleb128 0x1
+	.uleb128 0x12
+	.uleb128 0x6
+	.uleb128 0x1
 	.uleb128 0x13
-	.uleb128 0x2
-	.uleb128 0x18
+	.byte	0
+	.byte	0
+	.uleb128 0x1a
+	.uleb128 0xb
+	.byte	0x1
+	.uleb128 0x11
+	.uleb128 0x1
+	.uleb128 0x12
+	.uleb128 0x6
 	.byte	0
 	.byte	0
 	.uleb128 0x1b
-	.uleb128 0x2e
-	.byte	0x1
-	.uleb128 0x3f
-	.uleb128 0x19
+	.uleb128 0x34
+	.byte	0
 	.uleb128 0x3
 	.uleb128 0x8
 	.uleb128 0x3a
@@ -1517,67 +1483,30 @@ Ldebug_abbrev0:
 	.uleb128 0x5
 	.uleb128 0x49
 	.uleb128 0x13
+	.uleb128 0x3f
+	.uleb128 0x19
 	.uleb128 0x3c
 	.uleb128 0x19
-	.uleb128 0x1
-	.uleb128 0x13
 	.byte	0
 	.byte	0
 	.uleb128 0x1c
+	.uleb128 0x34
+	.byte	0
+	.uleb128 0x3
+	.uleb128 0x8
+	.uleb128 0x3a
 	.uleb128 0xb
-	.byte	0x1
-	.uleb128 0x11
-	.uleb128 0x1
-	.uleb128 0x12
-	.uleb128 0x6
-	.uleb128 0x1
+	.uleb128 0x3b
+	.uleb128 0xb
+	.uleb128 0x49
 	.uleb128 0x13
+	.uleb128 0x3f
+	.uleb128 0x19
+	.uleb128 0x3c
+	.uleb128 0x19
 	.byte	0
 	.byte	0
 	.uleb128 0x1d
-	.uleb128 0xb
-	.byte	0x1
-	.uleb128 0x11
-	.uleb128 0x1
-	.uleb128 0x12
-	.uleb128 0x6
-	.byte	0
-	.byte	0
-	.uleb128 0x1e
-	.uleb128 0x34
-	.byte	0
-	.uleb128 0x3
-	.uleb128 0x8
-	.uleb128 0x3a
-	.uleb128 0xb
-	.uleb128 0x3b
-	.uleb128 0x5
-	.uleb128 0x49
-	.uleb128 0x13
-	.uleb128 0x3f
-	.uleb128 0x19
-	.uleb128 0x3c
-	.uleb128 0x19
-	.byte	0
-	.byte	0
-	.uleb128 0x1f
-	.uleb128 0x34
-	.byte	0
-	.uleb128 0x3
-	.uleb128 0x8
-	.uleb128 0x3a
-	.uleb128 0xb
-	.uleb128 0x3b
-	.uleb128 0xb
-	.uleb128 0x49
-	.uleb128 0x13
-	.uleb128 0x3f
-	.uleb128 0x19
-	.uleb128 0x3c
-	.uleb128 0x19
-	.byte	0
-	.byte	0
-	.uleb128 0x20
 	.uleb128 0x34
 	.byte	0
 	.uleb128 0x3
@@ -1594,7 +1523,7 @@ Ldebug_abbrev0:
 	.uleb128 0x18
 	.byte	0
 	.byte	0
-	.uleb128 0x21
+	.uleb128 0x1e
 	.uleb128 0x35
 	.byte	0
 	.uleb128 0x49
@@ -1624,6 +1553,10 @@ Ldebug_line0:
 	.def	_UARTClockSourceSet;	.scl	2;	.type	32;	.endef
 	.def	_UARTStdioConfig;	.scl	2;	.type	32;	.endef
 	.def	_SysTickValueGet;	.scl	2;	.type	32;	.endef
+	.def	_SysTickDisable;	.scl	2;	.type	32;	.endef
+	.def	_usprintf;	.scl	2;	.type	32;	.endef
+	.def	_ROM_IntMasterDisable;	.scl	2;	.type	32;	.endef
+	.def	_GrStringDraw;	.scl	2;	.type	32;	.endef
 	.def	_ROM_FPULazyStackingEnable;	.scl	2;	.type	32;	.endef
 	.def	_ROM_SysCtlClockSet;	.scl	2;	.type	32;	.endef
 	.def	_UARTprintf;	.scl	2;	.type	32;	.endef
@@ -1634,13 +1567,9 @@ Ldebug_line0:
 	.def	_GrContextFontSet;	.scl	2;	.type	32;	.endef
 	.def	_GrFontBaselineGet;	.scl	2;	.type	32;	.endef
 	.def	_GrStringWidthGet;	.scl	2;	.type	32;	.endef
-	.def	_GrStringDraw;	.scl	2;	.type	32;	.endef
 	.def	_SysTickIntRegister;	.scl	2;	.type	32;	.endef
 	.def	_SysCtlClockGet;	.scl	2;	.type	32;	.endef
 	.def	_SysTickPeriodSet;	.scl	2;	.type	32;	.endef
 	.def	_IntMasterEnable;	.scl	2;	.type	32;	.endef
 	.def	_SysTickIntEnable;	.scl	2;	.type	32;	.endef
 	.def	_SysTickEnable;	.scl	2;	.type	32;	.endef
-	.def	_usprintf;	.scl	2;	.type	32;	.endef
-	.def	_ROM_IntMasterDisable;	.scl	2;	.type	32;	.endef
-	.def	_ROM_IntMasterEnable;	.scl	2;	.type	32;	.endef

@@ -77,6 +77,7 @@ extern void SysTickIntHandler(void);
 //
 //*****************************************************************************
 volatile uint32_t mytime = 0;
+volatile uint32_t testime = 0;
 volatile uint32_t prevtime = 0;
 uint resolution = 1000;
 uint32_t systick_period;
@@ -125,6 +126,13 @@ void
 SysTickIntHandler(void)
 {
     mytime++;
+    testime = SysTickValueGet();
+    SysTickDisable();
+    char str[4];
+    usprintf(str, "%d",testime);
+          ROM_IntMasterDisable();
+          GrStringDraw(&sContext, str, -1, 48,
+                       46, 1);
 }
 
 //*****************************************************************************
@@ -247,7 +255,7 @@ main(void)
     // Enable SysTick.
     //
     SysTickEnable();
-    char str[4];
+//    char str[4];
 
 //  //Calculate time to output char on LCD
 //    uint starttime = GetSysTime();
@@ -262,17 +270,17 @@ main(void)
      * 18th char takes an additional 3356. This time is used by the fifo
      * which shows busy while it empties. Why first 17 not 16?
      */
-  uint starttime = GetSysTime();
+//  uint starttime = GetSysTime();
   UARTprintf("Helliaqwuerting0r");
-  uint endtime = GetSysTime();
-
-
-    // Display results
-    usprintf(str, "%d",endtime-starttime);
-    ROM_IntMasterDisable();
-    GrStringDraw(&sContext, str, -1, 48,
-                 46, 1);
-    ROM_IntMasterEnable();
+//  uint endtime = GetSysTime();
+//
+//
+//    // Display results
+//    usprintf(str, "%d",endtime-starttime);
+//    ROM_IntMasterDisable();
+//    GrStringDraw(&sContext, str, -1, 48,
+//                 46, 1);
+//    ROM_IntMasterEnable();
 
     while(1)
     {

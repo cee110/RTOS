@@ -65,7 +65,19 @@ asmobj:
 #
 asmgcc: 
 	 gcc -v ${GCCPATH} -g -c -S -Wa,-alh exercise1.c
-	
+
+#
+# The default rule, which causes the exercise1 example to be built.
+#
+asmsystick: 
+	 gcc -v ${GCCPATH} -I. -g -c -S -Wa,-alh ${ROOT}/driverlib/systick.c
+
+#
+# The default rule, which causes the exercise1 example to be built.
+#
+asm_uart: 
+	 gcc -v ${GCCPATH} -I. -g -c -S -Wa,-alh ${ROOT}/utils/uartstdio.c
+	  
 #
 # The default rule, which causes the exercise1 example to be built.
 #
