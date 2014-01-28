@@ -171,8 +171,9 @@ Timer0IntHandler(void)
 	//Capture the entry time
 	if (measuretype == sysTickJitter)  { //Measure latency w.r.t SysTick Timer
 		array[arrayPtr] = GetSysTime();
-	} else { //Measure latency w.r.t timer0
+	} else { // Measure latency w.r.t timer0
 		array[arrayPtr] = TimerValueGet(TIMER0_BASE, TIMER_A);
+		array[arrayPtr] += timer0Count * TimerLoadGet(TIMER0_BASE, TIMER_A);
 	}
 
 	arrayPtr++;
