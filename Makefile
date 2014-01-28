@@ -44,12 +44,40 @@ include ${ROOT}/makedefs
 VPATH=../drivers
 VPATH+=../../../../utils
 
+GCCPATH = -I${VPATH}
+GCCPATH += -I..
+GCCPATH += -I${ROOT}
+
 #
 # Where to find header files that do not live in the source directory.
 #
 IPATH=..
 IPATH+=../../../..
 
+#
+# The default rule, which causes the exercise1 example to be built.
+#
+asmobj: 
+	objdump -l -d -m i386:intel gcc/exercise1.o > exercise1.s
+
+#
+# The default rule, which causes the exercise1 example to be built.
+#
+asmgcc: 
+	 gcc -v ${GCCPATH} -std=c99 -g -c -S -Wa,-alh exercise1.c
+
+#
+# The default rule, which causes the exercise1 example to be built.
+#
+asmsystick: 
+	 gcc -v ${GCCPATH} -I. -g -c -S -Wa,-alh ${ROOT}/driverlib/systick.c
+
+#
+# The default rule, which causes the exercise1 example to be built.
+#
+asm_uart: 
+	 gcc -v ${GCCPATH} -I. -g -c -S -Wa,-alh ${ROOT}/utils/uartstdio.c
+	  
 #
 # The default rule, which causes the exercise1 example to be built.
 #
