@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "inc/hw_nvic.h"
 #include "inc/hw_memmap.h"
 #include "driverlib/fpu.h"
 #include "driverlib/sysctl.h"
@@ -94,12 +95,12 @@ uint resolution = .000131;
 uint32_t systick_period;
 
 volatile uint array[51];
-volatile uint arrayPtr = 0;
+volatile uint arrayPtr;
 typedef enum {
 latency, sysTickJitter
 }measureType;
 
-measureType measuretype = latency;
+measureType measuretype = sysTickJitter;
 
 //*****************************************************************************
 //
@@ -168,17 +169,20 @@ GetSysTime() {
 void
 Timer0IntHandler(void)
 {
+	uint temp = SysTickValueGet();
+	if (arrayPtr == -1) HWREG(NVIC_ST_CURRENT) = 0;
 	//Capture the entry time
-	if (measuretype == sysTickJitter)  { //Measure latency w.r.t SysTick Timer
-		array[arrayPtr] = GetSysTime();
+	else if (measuretype == sysTickJitter)  { //Measure latency w.r.t SysTick Timer
+		HWREG(NVIC_ST_CURRENT) = 0; //Force systick to reload.
+		array[arrayPtr] = 16777216 - temp; //Assume critical code time << SysTick period
 	} else { // Measure latency w.r.t timer0
 		array[arrayPtr] = TimerValueGet(TIMER0_BASE, TIMER_A);
-		array[arrayPtr] += timer0Count * TimerLoadGet(TIMER0_BASE, TIMER_A);
 	}
 
 	arrayPtr++;
 	// If arrayptr = 50 disable all interrupts to stop timing
 	if (arrayPtr == 51) IntMasterDisable();
+
     //
     // Clear the timer interrupt.
     //
@@ -325,7 +329,7 @@ main(void)
 	//
 	// Set up the period for the SysTick timer(Resolution 1us).
 	//
-	systick_period = SysCtlClockGet()*resolution;
+	systick_period = SysCtlClockGet();
 	SysTickPeriodSet(systick_period);
 
 	//
@@ -341,8 +345,12 @@ main(void)
 	//
 	// Enable SysTick.
 	//
-	SysTickEnable();
 
+	if (measuretype == sysTickJitter) {
+		arrayPtr = -1;
+	} else {
+		arrayPtr = 0;
+	}
 
 	char str[4];
 	uint32_t prevtime = 0;
@@ -354,29 +362,32 @@ main(void)
 	 * We need to calculate min, max and ave timer entry count.
 	 */
 	bool myswitch = 1;
+//	uint interval;
+	SysTickEnable();
     while(1)
     {
+    	//estimate critical section time
     	if (myswitch) {
+//    		interval = SysTickValueGet();
 			ROM_IntMasterDisable();
-			GrStringDraw(&sContext, "Yo YO YO!", -1, 48,
+			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220366 clocks
 						 46, 1);
 			ROM_IntMasterEnable();
+//			interval -= SysTickValueGet();
+//
+//
+//			sRect.i16YMax = 63;
+//			GrContextForegroundSet(&sContext, ClrBlack);
+//			GrRectFill(&sContext, &sRect);
+//			//Display results
+//			GrContextForegroundSet(&sContext, ClrWhite);
+//			usprintf(str, "%d",interval);
+//			ROM_IntMasterDisable();
+//			GrStringDraw(&sContext, str, -1, 48, 46, 1);
+//			ROM_IntMasterEnable();
+//			myswitch = 0;//Display once
+
     	}
-//    	if (measuretype == latency) {
-//    		mytime = timer0Count;
-//    	} else {
-//    		mytime = SysTickCount;
-//    	}
-//    	if (myswitch){
-//			if (prevtime != mytime) {
-//				prevtime = mytime;
-//				usprintf(str, "%d",GetSysTime());
-//				ROM_IntMasterDisable();
-//				GrStringDraw(&sContext, "Yo YO YO!", -1, 48,
-//							 46, 1);
-//				ROM_IntMasterEnable();
-//			}
-//    	}
     	// Calculate Min, Max and Ave Jitter time
     	if (arrayPtr >= 51 && myswitch) {
     		uint ave = 0, min, max;
@@ -389,24 +400,38 @@ main(void)
 					ave += array[i];
 				}
     			ave /= 51;
-    		} else { // Display shows Jitter measurements wrt SysTick Timer
+    		}
+//    		else { // Display shows Jitter measurements wrt SysTick Timer [Simple version]
+//    			uint timer0period = TimerLoadGet(TIMER0_BASE, TIMER_A);
+//				uint temp;
+//				min = abs(abs(array[0] - array[1]) - timer0period);
+//				max = min;
+//				for (int i = 1; i < 51; i++) {
+//					 temp = abs(abs(array[i] - array[i-1]) - timer0period);
+//					if (temp < min) min = temp;
+//					if (temp > max) max = temp;
+//					ave += temp;
+//				}
+//				ave /= 50;
+//    		}
+    		else { // Display shows Jitter measurements wrt SysTick Timer [Complex version]
     			uint timer0period = TimerLoadGet(TIMER0_BASE, TIMER_A);
 				uint temp;
-				min = abs(abs(array[0] - array[1]) - timer0period);
+				min = array[0] - timer0period;
 				max = min;
-				for (int i = 1; i < 51; i++) {
-					 temp = abs(abs(array[i] - array[i-1]) - timer0period);
+				for (int i = 0; i < 51; i++) {
+					 temp = array[i]-timer0period;
 					if (temp < min) min = temp;
 					if (temp > max) max = temp;
 					ave += temp;
 				}
-				ave /= 50;
+				ave /= 51;
     		}
 
     		char str1[5], str2[5], str3[5];
     		usprintf(str1, "%d",min);
     		usprintf(str2, "%d",max);
-    		usprintf(str3, "%d",ave);
+    		usprintf(str3, "%d",ave); //modified!
     		//Clear Display
     		sRect.i16YMax = 63;
 			GrContextForegroundSet(&sContext, ClrBlack);
@@ -414,9 +439,9 @@ main(void)
     		//Display results
 			GrContextForegroundSet(&sContext, ClrWhite);
 			ROM_IntMasterDisable();
-    		GrStringDraw(&sContext, str1, -1, 48, 22, 1);
-    		GrStringDraw(&sContext, str2, -1, 48, 34, 1);
-    		GrStringDraw(&sContext, str3, -1, 48, 46, 1);
+    		GrStringDraw(&sContext, str1, -1, 40, 22, 1);
+    		GrStringDraw(&sContext, str2, -1, 40, 34, 1);
+    		GrStringDraw(&sContext, str3, -1, 40, 46, 1);
     		ROM_IntMasterEnable();
     		myswitch = 0;//Display once
     	}
