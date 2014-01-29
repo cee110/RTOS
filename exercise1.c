@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "inc/hw_timer.h"
 #include "inc/hw_nvic.h"
 #include "inc/hw_memmap.h"
 #include "driverlib/fpu.h"
@@ -41,6 +42,7 @@
 #include "driverlib/timer.h"
 #include "inc/hw_types.h"
 #include "inc/hw_ints.h"
+#include "exercise1.h"
 //*****************************************************************************
 //
 //! \addtogroup example_list
@@ -91,6 +93,7 @@ uint32_t g_ui32Flags;
 volatile uint32_t timer0Count = 0;
 volatile uint32_t timer1Count = 0;
 volatile uint32_t SysTickCount = 0;
+volatile tContext sContext;
 uint resolution = .000131;
 uint32_t systick_period;
 
@@ -212,6 +215,30 @@ Timer1IntHandler(void)
     //
     HWREGBITW(&g_ui32Flags, 1) ^= 1;
 }
+
+//*****************************************************************************
+//
+// Configure Delay based on Timer2
+//
+//*****************************************************************************
+
+//*****************************************************************************
+//
+// Delay function based on Timer2
+//
+//*
+//#pragma GCC optimize("O0")
+//void
+//Delay(uint32_t ui32MicroSecs) {
+//    //
+//    // Loop while there are more seconds to wait.
+//    //
+//	volatile uint temp = ui32MicroSecs;
+//    while(temp--)
+//    {
+//    	//Do nothing really
+//    }
+//}
 //*****************************************************************************
 //
 // Print "exercise1 World!" to the display.
@@ -249,7 +276,7 @@ main(void)
     //
     // Initialize the graphics context.
     //
-    tContext sContext;
+
     GrContextInit(&sContext, &g_sCFAL96x64x16);
 
     //
@@ -298,9 +325,9 @@ main(void)
     //
     ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC_UP);
     ROM_TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC_UP);
+
     ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, ROM_SysCtlClockGet()*.000023);
     ROM_TimerLoadSet(TIMER1_BASE, TIMER_A, ROM_SysCtlClockGet()*.0001);
-
 	//
     // Setup the interrupts for the timer timeouts.
     //
@@ -352,7 +379,7 @@ main(void)
 		arrayPtr = 0;
 	}
 
-	char str[4];
+	char str[10];
 	uint32_t prevtime = 0;
 	uint32_t mytime = 0;
 	// *****
@@ -362,30 +389,37 @@ main(void)
 	 * We need to calculate min, max and ave timer entry count.
 	 */
 	bool myswitch = 1;
-//	uint interval;
+	uint interval = 0;
 	SysTickEnable();
+	// Calibrate Delay function
+
+	uint start = HWREG(NVIC_ST_CURRENT);
+	Delay_us(10);
+	uint end = HWREG(NVIC_ST_CURRENT);
+
+	usprintf(str, "%d", start - end);
+	GrStringDraw(&sContext, str, -1, 48, 46, 1);
+
     while(1)
     {
     	//estimate critical section time
     	if (myswitch) {
 //    		interval = SysTickValueGet();
-			ROM_IntMasterDisable();
-			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220366 clocks
-						 46, 1);
-			ROM_IntMasterEnable();
+//			ROM_IntMasterDisable();
+//			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220366 clocks
+//						 46, 1);
+//			ROM_IntMasterEnable();
 //			interval -= SysTickValueGet();
-//
-//
 //			sRect.i16YMax = 63;
 //			GrContextForegroundSet(&sContext, ClrBlack);
 //			GrRectFill(&sContext, &sRect);
 //			//Display results
 //			GrContextForegroundSet(&sContext, ClrWhite);
-//			usprintf(str, "%d",interval);
+//			usprintf(str, "%d", end);
 //			ROM_IntMasterDisable();
 //			GrStringDraw(&sContext, str, -1, 48, 46, 1);
 //			ROM_IntMasterEnable();
-//			myswitch = 0;//Display once
+			myswitch = 0;//Display once
 
     	}
     	// Calculate Min, Max and Ave Jitter time
@@ -431,7 +465,7 @@ main(void)
     		char str1[5], str2[5], str3[5];
     		usprintf(str1, "%d",min);
     		usprintf(str2, "%d",max);
-    		usprintf(str3, "%d",ave); //modified!
+    		usprintf(str3, "%d",ave); //modify here for any other variable to be checked!
     		//Clear Display
     		sRect.i16YMax = 63;
 			GrContextForegroundSet(&sContext, ClrBlack);
