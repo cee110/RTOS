@@ -173,18 +173,17 @@ void
 Timer0IntHandler(void)
 {
 	uint temp = HWREG(NVIC_ST_CURRENT);
-	if (arrayPtr == -1 || arrayPtr == 50){} // Do nothing. The best approximation to PARTB code.
+	if (arrayPtr == -1){}// HWREG(NVIC_ST_CURRENT) = 0;
 	//Capture the entry time
 	else if (measuretype == sysTickJitter)  { //Measure latency w.r.t SysTick Timer
-//		HWREG(NVIC_ST_CURRENT) = 0; //Force systick to reload.
-		array[arrayPtr+1] = 16445568 - temp; //Assume critical code time << SysTick period | Updated period
-
+		//HWREG(NVIC_ST_CURRENT) = 0; //Force systick to reload.
+		array[arrayPtr] = 16445568 - temp; //Assume critical code time << SysTick period | Updated period
 	} else { // Measure latency w.r.t timer0
 		array[arrayPtr+1] = TimerValueGet(TIMER0_BASE, TIMER_A);
 	}
 
 	// If arrayptr = 50 disable all interrupts to stop timing
-	if (arrayPtr == 50) {
+	if (arrayPtr == 51) {
 		IntMasterDisable();
 	} else {
 		arrayPtr++;
@@ -199,14 +198,6 @@ Timer0IntHandler(void)
     // Toggle the flag for the first timer.
     //
     HWREGBITW(&g_ui32Flags, 0) ^= 1;
-    uint endtime = HWREG(NVIC_ST_CURRENT);
-    // Measurements after here don't affect DEV_ISR time estimate.
-    // If Systick timer has reloaded
-    if (temp < endtime)
-    	array[arrayPtr] = temp + 16445568 - endtime;
-    else {
-    	array[arrayPtr] = temp - endtime;
-    }
 }
 
 //*****************************************************************************
@@ -327,7 +318,6 @@ main(void)
     	} else {
     		arrayPtr = 0;
     	}
-
     //Register Interrupt Handlers
     IntRegister(INT_TIMER0A, Timer0IntHandler);
     IntRegister(INT_TIMER1A, Timer1IntHandler);
@@ -360,10 +350,6 @@ main(void)
     ROM_TimerEnable(TIMER0_BASE, TIMER_A);
     ROM_TimerEnable(TIMER1_BASE, TIMER_A);
 
-    // Configure interrupt Handler
-    // The SysTick and SysTick interrupt with a resolution of the system clock.
-    //
-
 	//
 	// Register the interrupt handler function for SysTick.
 	//
@@ -392,52 +378,20 @@ main(void)
 	//
 	SysTickEnable();
 
-
-//	char str[10];
-//	uint32_t prevtime = 0;
-//	uint32_t mytime = 0;
-	// *****
-	// Timer Test Area
-	// *****
-	/**
-	 * We need to calculate min, max and ave timer entry count.
-	 */
 	bool isUsed = 1;
-//	uint interval = 0;
-
-	// Calibrate Delay function
-
-//	uint start = HWREG(NVIC_ST_CURRENT);
-//	Delay_us(10);
-//	uint end = HWREG(NVIC_ST_CURRENT);
-
-//	usprintf(str, "%d", start - end);
-//	GrStringDraw(&sContext, str, -1, 48, 46, 1);
+	uint interval = 0;
 
     while(1)
     {
     	//estimate critical section time
-//    	if (isUsed) {
-//    		interval = SysTickValueGet();
-//			ROM_IntMasterDisable();
-//			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220366 clocks
-//						 46, 1);
-//			ROM_IntMasterEnable();
-//			interval -= SysTickValueGet();
-//			sRect.i16YMax = 63;
-//			GrContextForegroundSet(&sContext, ClrBlack);
-//			GrRectFill(&sContext, &sRect);
-//			//Display results
-//			GrContextForegroundSet(&sContext, ClrWhite);
-//			usprintf(str, "%d", end);
-//			ROM_IntMasterDisable();
-//			GrStringDraw(&sContext, str, -1, 48, 46, 1);
-//			ROM_IntMasterEnable();
-//			myswitch = 0;//Display once
-//
-//    	}
+    	if (isUsed) {
+			ROM_IntMasterDisable();
+			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220366 clocks
+						 46, 1);
+			ROM_IntMasterEnable();
+    	}
     	// Calculate Min, Max and Ave Jitter time
-    	if (arrayPtr == 50 && isUsed) {
+    	if (arrayPtr == 51 && isUsed) {
     		uint ave = 0, min, max;
     		if (measuretype == latency) { // Display shows Latency measurements
     			min = array[0];
@@ -449,26 +403,12 @@ main(void)
 				}
     			ave /= 51;
     		}
-//    		else { // Display shows Jitter measurements wrt SysTick Timer [Simple version]
-//    			uint timer0period = TimerLoadGet(TIMER0_BASE, TIMER_A);
-//				uint temp;
-//				min = abs(abs(array[0] - array[1]) - timer0period);
-//				max = min;
-//				for (int i = 1; i < 51; i++) {
-//					 temp = abs(abs(array[i] - array[i-1]) - timer0period);
-//					if (temp < min) min = temp;
-//					if (temp > max) max = temp;
-//					ave += temp;
-//				}
-//				ave /= 50;
-//    		}
-    		else { // Display shows Jitter measurements wrt SysTick Timer [Complex version][Modified for PartC!]
-//    			uint timer0period = TimerLoadGet(TIMER0_BASE, TIMER_A);
+    		else { // Display shows Jitter measurements wrt SysTick Timer [Simple version]
 				uint temp;
 				min = array[0];
 				max = min;
-				for (int i = 0; i < 50; i++) { // Discard last measurement
-					 temp = array[i];//-timer0period;
+				for (int i = 1; i < 51; i++) {
+					 temp = array[i];
 					if (temp < min) min = temp;
 					if (temp > max) max = temp;
 					ave += temp;
@@ -495,10 +435,3 @@ main(void)
     	}
     }
 }
-/**
- * Code explanation.
- * When attempting to measure latency from timer 1 with period 23us,
- * for a large critical foreground code, it doesn't work which is expected.
- * For non critical code, latency min max ave are 34, 36, 34 clocks with is expected. Jitter is 2 clocks.
- * However, timer is not the most accurate. A solution is to measure latency wrt to systick with is accurate to 1%.
- */
