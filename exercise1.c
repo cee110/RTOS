@@ -183,14 +183,12 @@ Timer0IntHandler(void)
 		array[arrayPtr] = TimerValueGet(TIMER0_BASE, TIMER_A);
 	}
 //	Delay_us(6);
-
 	// If arrayptr = 50 disable all interrupts to stop timing
 	if (arrayPtr == 51) {
 		IntMasterDisable();
 	} else {
 		arrayPtr++;
 	}
-
     //
     // Clear the timer interrupt.
     //
@@ -321,7 +319,7 @@ main(void)
     // Enable the timers.
     //
     ROM_TimerEnable(TIMER0_BASE, TIMER_A);
-    ROM_TimerEnable(TIMER1_BASE, TIMER_A);
+//    ROM_TimerEnable(TIMER1_BASE, TIMER_A);
 
     // Configure interrupt Handler
     // The SysTick and SysTick interrupt with a resolution of the system clock.
@@ -361,6 +359,8 @@ main(void)
 	}
 	forePtr = 0;
 	char str[4];
+	uint32_t prevtime = 0;
+	uint32_t mytime = 0;
 	// *****
 	// Timer Test Area
 	// *****
@@ -374,19 +374,28 @@ main(void)
     {
     	//estimate critical section time
     	if (isUsed && forePtr < 51) {
-//    		interval = HWREG(NVIC_ST_CURRENT);
     		fore[forePtr++] = HWREG(NVIC_ST_CURRENT);
 			ROM_IntMasterDisable();
-			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220187 clocks
+			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220366 clocks
 						 46, 1);
-//			ROM_IntMasterEnable();
+			ROM_IntMasterEnable();
 //			interval -= HWREG(NVIC_ST_CURRENT);
+//
+//
+//			sRect.i16YMax = 63;
+//			GrContextForegroundSet(&sContext, ClrBlack);
+//			GrRectFill(&sContext, &sRect);
+//			//Display results
+//			GrContextForegroundSet(&sContext, ClrWhite);
 //			usprintf(str, "%d",interval);
-//			GrStringDraw(&sContext, str, -1, 40, 22, 1);
-//			isUsed = 0;
+//			ROM_IntMasterDisable();
+//			GrStringDraw(&sContext, str, -1, 48, 46, 1);
+//			ROM_IntMasterEnable();
+//			myswitch = 0;//Display once
+
     	}
     	// Calculate Min, Max and Ave Jitter time
-    	if (forePtr == 51 && isUsed) {
+    	if (arrayPtr == 51 && isUsed) {
     		uint ave = 0, min, max;
     		if (measuretype == latency) { // Display shows Latency measurements
     			min = abs(array[0]);
@@ -398,6 +407,19 @@ main(void)
 				}
     			ave /= 51;
     		}
+//    		else { // Display shows Jitter measurements wrt SysTick Timer [Simple version]
+//    			uint timer0period = TimerLoadGet(TIMER0_BASE, TIMER_A);
+//				uint temp;
+//				min = abs(abs(array[0] - array[1]) - timer0period);
+//				max = min;
+//				for (int i = 1; i < 51; i++) {
+//					 temp = abs(abs(array[i] - array[i-1]) - timer0period);
+//					if (temp < min) min = temp;
+//					if (temp > max) max = temp;
+//					ave += temp;
+//				}
+//				ave /= 50;
+//    		}
     		else { // Display shows Jitter measurements wrt SysTick Timer [Complex version]
 				uint temp;
 				min = fore[0] - fore[1];

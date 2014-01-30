@@ -14,7 +14,7 @@
  * IN general, cycles = 25 + 8(n-1)
  * t = 0.5 + 0.16(n-1), where t is time in microseconds.
  */
-#define Delay_us(t) {volatile int n = (100*(t) - 34)/16; while (n--);}
+#define Delay_us(t) {volatile int m = (100*(t) - 34)/16; while (m--);}
 
 
 
