@@ -41,6 +41,8 @@
 #include "driverlib/timer.h"
 #include "inc/hw_types.h"
 #include "inc/hw_ints.h"
+#include "restrictpatch.h"
+#include "exercise1.h"
 //*****************************************************************************
 //
 //! \addtogroup example_list
@@ -96,6 +98,8 @@ uint32_t systick_period;
 
 volatile uint array[51];
 volatile uint arrayPtr;
+volatile uint fore[51];
+volatile uint forePtr;
 typedef enum {
 latency, sysTickJitter
 }measureType;
@@ -157,7 +161,7 @@ uint
 GetSysTime() {
 	//Convert tick count to time
 	uint tick = SysTickCount * systick_period;
-	tick += systick_period - SysTickValueGet();
+	tick += systick_period - HWREG(NVIC_ST_CURRENT);
 	// one tick is 0.02us
 	return tick;
 }
@@ -169,16 +173,16 @@ GetSysTime() {
 void
 Timer0IntHandler(void)
 {
-	uint temp = SysTickValueGet();
-	if (arrayPtr == -1) HWREG(NVIC_ST_CURRENT) = 0;
+	uint temp = HWREG(NVIC_ST_CURRENT);
+	if (arrayPtr == -1){} //HWREG(NVIC_ST_CURRENT) = 0;
 	//Capture the entry time
 	else if (measuretype == sysTickJitter)  { //Measure latency w.r.t SysTick Timer
-		HWREG(NVIC_ST_CURRENT) = 0; //Force systick to reload.
+		//HWREG(NVIC_ST_CURRENT) = 0; //Force systick to reload.
 		array[arrayPtr] = 16777216 - temp; //Assume critical code time << SysTick period
 	} else { // Measure latency w.r.t timer0
 		array[arrayPtr] = TimerValueGet(TIMER0_BASE, TIMER_A);
 	}
-
+//	Delay_us(6);
 	arrayPtr++;
 	// If arrayptr = 50 disable all interrupts to stop timing
 	if (arrayPtr == 51) IntMasterDisable();
@@ -312,8 +316,8 @@ main(void)
     //
     // Enable the timers.
     //
-    ROM_TimerEnable(TIMER0_BASE, TIMER_A);
-    ROM_TimerEnable(TIMER1_BASE, TIMER_A);
+//    ROM_TimerEnable(TIMER0_BASE, TIMER_A);
+//    ROM_TimerEnable(TIMER1_BASE, TIMER_A);
 
     // Configure interrupt Handler
     // The SysTick and SysTick interrupt with a resolution of the system clock.
@@ -351,45 +355,33 @@ main(void)
 	} else {
 		arrayPtr = 0;
 	}
-
+	forePtr = 0;
 	char str[4];
-	uint32_t prevtime = 0;
-	uint32_t mytime = 0;
 	// *****
 	// Timer Test Area
 	// *****
 	/**
 	 * We need to calculate min, max and ave timer entry count.
 	 */
-	bool myswitch = 1;
-//	uint interval;
+	bool isUsed = 1;
+	uint interval;
 	SysTickEnable();
     while(1)
     {
     	//estimate critical section time
-    	if (myswitch) {
-//    		interval = SysTickValueGet();
+    	if (isUsed && forePtr < 51) {
+    		interval = HWREG(NVIC_ST_CURRENT);
 			ROM_IntMasterDisable();
 			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220366 clocks
 						 46, 1);
 			ROM_IntMasterEnable();
-//			interval -= SysTickValueGet();
-//
-//
-//			sRect.i16YMax = 63;
-//			GrContextForegroundSet(&sContext, ClrBlack);
-//			GrRectFill(&sContext, &sRect);
-//			//Display results
-//			GrContextForegroundSet(&sContext, ClrWhite);
-//			usprintf(str, "%d",interval);
-//			ROM_IntMasterDisable();
-//			GrStringDraw(&sContext, str, -1, 48, 46, 1);
-//			ROM_IntMasterEnable();
-//			myswitch = 0;//Display once
-
+			interval = HWREG(NVIC_ST_CURRENT) - interval;
+			usprintf(str, "%d",interval);
+			GrStringDraw(&sContext, str, -1, 40, 46, 1);
+			isUsed = 0;
     	}
     	// Calculate Min, Max and Ave Jitter time
-    	if (arrayPtr >= 51 && myswitch) {
+    	if (forePtr == 51 && isUsed) {
     		uint ave = 0, min, max;
     		if (measuretype == latency) { // Display shows Latency measurements
     			min = abs(array[0]);
@@ -401,31 +393,17 @@ main(void)
 				}
     			ave /= 51;
     		}
-//    		else { // Display shows Jitter measurements wrt SysTick Timer [Simple version]
-//    			uint timer0period = TimerLoadGet(TIMER0_BASE, TIMER_A);
-//				uint temp;
-//				min = abs(abs(array[0] - array[1]) - timer0period);
-//				max = min;
-//				for (int i = 1; i < 51; i++) {
-//					 temp = abs(abs(array[i] - array[i-1]) - timer0period);
-//					if (temp < min) min = temp;
-//					if (temp > max) max = temp;
-//					ave += temp;
-//				}
-//				ave /= 50;
-//    		}
     		else { // Display shows Jitter measurements wrt SysTick Timer [Complex version]
-    			uint timer0period = TimerLoadGet(TIMER0_BASE, TIMER_A);
 				uint temp;
-				min = array[0] - timer0period;
+				min = fore[0] - fore[1];
 				max = min;
-				for (int i = 0; i < 51; i++) {
-					 temp = array[i]-timer0period;
+				for (int i = 1; i < forePtr-1; i++) {
+					 temp = fore[i]-fore[i+1];
 					if (temp < min) min = temp;
 					if (temp > max) max = temp;
 					ave += temp;
 				}
-				ave /= 51;
+				ave /= (forePtr-2);
     		}
 
     		char str1[5], str2[5], str3[5];
