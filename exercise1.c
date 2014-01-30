@@ -183,9 +183,13 @@ Timer0IntHandler(void)
 		array[arrayPtr] = TimerValueGet(TIMER0_BASE, TIMER_A);
 	}
 //	Delay_us(6);
-	arrayPtr++;
+
 	// If arrayptr = 50 disable all interrupts to stop timing
-	if (arrayPtr == 51) IntMasterDisable();
+	if (arrayPtr == 51) {
+		IntMasterDisable();
+	} else {
+		arrayPtr++;
+	}
 
     //
     // Clear the timer interrupt.
@@ -316,8 +320,8 @@ main(void)
     //
     // Enable the timers.
     //
-//    ROM_TimerEnable(TIMER0_BASE, TIMER_A);
-//    ROM_TimerEnable(TIMER1_BASE, TIMER_A);
+    ROM_TimerEnable(TIMER0_BASE, TIMER_A);
+    ROM_TimerEnable(TIMER1_BASE, TIMER_A);
 
     // Configure interrupt Handler
     // The SysTick and SysTick interrupt with a resolution of the system clock.
@@ -370,15 +374,16 @@ main(void)
     {
     	//estimate critical section time
     	if (isUsed && forePtr < 51) {
-    		interval = HWREG(NVIC_ST_CURRENT);
+//    		interval = HWREG(NVIC_ST_CURRENT);
+    		fore[forePtr++] = HWREG(NVIC_ST_CURRENT);
 			ROM_IntMasterDisable();
-			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220366 clocks
+			GrStringDraw(&sContext, "Yo YO YO!", -1, 48, // Critical section is 220187 clocks
 						 46, 1);
-			ROM_IntMasterEnable();
-			interval = HWREG(NVIC_ST_CURRENT) - interval;
-			usprintf(str, "%d",interval);
-			GrStringDraw(&sContext, str, -1, 40, 46, 1);
-			isUsed = 0;
+//			ROM_IntMasterEnable();
+//			interval -= HWREG(NVIC_ST_CURRENT);
+//			usprintf(str, "%d",interval);
+//			GrStringDraw(&sContext, str, -1, 40, 22, 1);
+//			isUsed = 0;
     	}
     	// Calculate Min, Max and Ave Jitter time
     	if (forePtr == 51 && isUsed) {
@@ -421,7 +426,7 @@ main(void)
     		GrStringDraw(&sContext, str2, -1, 40, 34, 1);
     		GrStringDraw(&sContext, str3, -1, 40, 46, 1);
     		ROM_IntMasterEnable();
-    		myswitch = 0;//Display once
+    		isUsed = 0;//Display once
     	}
     }
 }
