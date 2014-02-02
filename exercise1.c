@@ -38,7 +38,6 @@
 #include "utils/ustdlib.h"
 #include "driverlib/timer.h"
 #include "inc/hw_timer.h"
-#include "restrictpatch.h"
 #include "inc/hw_nvic.h"
 #include "inc/hw_types.h"
 #include "inc/hw_ints.h"
