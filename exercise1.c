@@ -85,13 +85,44 @@ extern void SysTickIntHandler(void);
 uint32_t g_ui32Flags;
 //*****************************************************************************
 //
-// Counter to count the number of interrupts that have been called.
+// Counter to count the number of interrupts that have been called by SysTick.
 //
 //*****************************************************************************
 volatile uint32_t current_time = 0;
 volatile uint32_t prevtime = 0;
-volatile uint32_t timings[4];
-const uint32_t systick_period = 50000;
+//*****************************************************************************
+//
+// Stores the values to be measure. In general, measurements[0] stores minimum
+// measurements[1], maximum; measurements[2] = average;
+// measurements[3] = interrupt handler entry count
+//
+//*****************************************************************************
+volatile uint32_t measurements[4];
+//*****************************************************************************
+//
+// Stores the entry previous time to interrupt handler
+//
+//*****************************************************************************
+volatile uint32_t prev_entrytime = 0;
+//*****************************************************************************
+//
+// Period of timer0
+//
+//*****************************************************************************
+const uint32_t timer0_period = 1150; // 50E6 * 0.000023
+//*****************************************************************************
+//
+// Period of timer 1
+//
+//*****************************************************************************
+const uint32_t timer1_period = 5000; // 50E6 * 0.0001
+//*****************************************************************************
+//
+// Period of SysTick Timer.
+//
+//*****************************************************************************
+const uint32_t systick_period = 6550;// 50E6 * 0.000131
+
 tContext sContext;
 //*****************************************************************************
 //
@@ -152,7 +183,7 @@ GetSysTime() {
 void
 Timer0IntHandler(void)
 {
-	uint temptime = TimerValueGet(TIMER0_BASE, TIMER_A);
+	uint latency = TimerValueGet(TIMER0_BASE, TIMER_A);
     //
     // Clear the timer interrupt.
     //
@@ -162,76 +193,137 @@ Timer0IntHandler(void)
     //
     HWREGBITW(&g_ui32Flags, 0) ^= 1;
     // Get Minimum.
-    if (temptime < timings[0]) {
-    	timings[0] = (temptime == 0)? timings[0]:temptime;
+    if (latency < measurements[0]) {
+    	measurements[0] = (latency == 0)? measurements[0]:latency;
     }
     // Get Maximum.
-    if (temptime > timings[1]) {
-    	timings[1]  = temptime;
+    if (latency > measurements[1]) {
+    	measurements[1]  = latency;
     }
     // Accummulate Average.
-    timings[2]+= temptime;
-    timings[3]++;
+    measurements[2]+= latency;
+    measurements[3]++;
 }
 
 //*****************************************************************************
 //
-// The interrupt handler for the second timer interrupt.
+// The interrupt handler for the second timer level 2 interrupt.
 //
 //*****************************************************************************
+#pragma GCC optimize("O1")
 void
 Timer1IntHandler(void)
 {
+	uint entrytime = HWREG(NVIC_ST_CURRENT);
+	uint jitter;
     //
     // Clear the timer interrupt.
     //
     ROM_TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-
     //
     // Toggle the flag for the second timer.
     //
     HWREGBITW(&g_ui32Flags, 1) ^= 1;
+
+    entrytime = (current_time + 1) * systick_period - entrytime;
+
+    if (prev_entrytime != 0) {
+    	jitter = entrytime - prev_entrytime - timer1_period;
+    	 /*
+    	  * +ve Jitter only. Can be negative due to wrap around
+    	  * of SysTick that has not been updated. If optimise flag
+    	  * is not included, comment out this
+    	  * if statement to find minimum jitter. To find maximum,
+    	  * uncomment it. The compile's optimisation affects
+    	  * the results.
+    	  */
+    	if ((int)jitter >= 0 ) {
+    		// Get Minimum.
+    	    if (jitter < measurements[0]) {
+    	    	measurements[0] = jitter;
+    	    }
+    	    // Get Maximum.
+    	    if (jitter > measurements[1]) {
+    	    	measurements[1]  = jitter;
+    	    }
+    	    // Accummulate Average.
+    	    measurements[2]+= jitter;
+    	    measurements[3]++;
+    	}
+    }
+    prev_entrytime = entrytime;
 }
+//*****************************************************************************
+//
+// Sets up timer0 to count up periodically with a period of 23us.
+// Its priority is 1. 0 is reserved for exception handling.
+//
+//*****************************************************************************
 void
-ConfigTimers() {
+ConfigTimer0() {
 	//Register Interrupt Handlers
 	TimerIntRegister(TIMER0_BASE, TIMER_A, Timer0IntHandler);
-	TimerIntRegister(TIMER1_BASE, TIMER_A, Timer1IntHandler);
-
 	// Set the priority of the Timers
 	// Set Timer0 as level 1 priority
-	IntPrioritySet(INT_TIMER0A,1);
-	// Set Timer1 as level 2 priority
-	IntPrioritySet(INT_TIMER1A,2);
+	IntPrioritySet(INT_TIMER0A, 1);
 
 	// Enable the timer peripherals.
 	//
 	ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
-	ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
-
 	//
 	// Configure the two 32-bit periodic timers.
 	//
 	ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC_UP);
-	ROM_TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC_UP);
-	ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, ROM_SysCtlClockGet()*.000023);
-	ROM_TimerLoadSet(TIMER1_BASE, TIMER_A, ROM_SysCtlClockGet()*.0001);
-
+	ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, timer0_period);
 	//
 	// Setup the interrupts for the timer timeouts.
 	//
 	ROM_IntEnable(INT_TIMER0A);
-	ROM_IntEnable(INT_TIMER1A);
 	ROM_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-	ROM_TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-
 	//
-	// Enable the timers.
+	// Enable the timer0.
 	//
 	ROM_TimerEnable(TIMER0_BASE, TIMER_A);
+}
+
+//*****************************************************************************
+//
+// Sets up timer1 to count up periodically with a period of 131us.
+// Its priority is 2. 0 is reserved for exception handling.
+//
+//*****************************************************************************
+void
+ConfigTimer1() {
+	//Register Interrupt Handlers
+	TimerIntRegister(TIMER1_BASE, TIMER_A, Timer1IntHandler);
+	// Set the priority of the Timers
+	// Set Timer1 as level 2 priority
+	IntPrioritySet(INT_TIMER1A, 2);
+	// Enable the timer peripherals.
+	//
+	ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
+	//
+	// Configure the two 32-bit periodic timers.
+	//
+	ROM_TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC_UP);
+	ROM_TimerLoadSet(TIMER1_BASE, TIMER_A, timer1_period);
+	//
+	// Setup the interrupts for the timer timeouts.
+	//;
+	ROM_IntEnable(INT_TIMER1A);
+	ROM_TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
+	//
+	// Enable the timer1.
+	//
 	ROM_TimerEnable(TIMER1_BASE, TIMER_A);
 }
 
+//*****************************************************************************
+//
+// Sets up SysTick Timer to count down periodically with a period of 131us.
+// Its priority is 3. 0 is reserved for exception handling.
+//
+//*****************************************************************************
 void
 ConfigSysTick() {
 	 //
@@ -262,6 +354,7 @@ ConfigSysTick() {
 	//
 	SysTickEnable();
 }
+
 //*****************************************************************************
 //
 // Print "exercise1 World!" to the display.
@@ -330,42 +423,67 @@ main(void)
     GrFlush(&sContext);
 
     // Configure Interrupt Handler Variables.
-    timings[0] = MAX_VAL;
-    timings[1] = 0;
-    timings[2] = 0;
-    timings[3] = 0;
+    measurements[0] = MAX_VAL;
+    measurements[1] = 0;
+    measurements[2] = 0;
+    measurements[3] = 0;
 
-    // Configure Timers.
+    /*
+     * Configure Timers. Use ConfigTimer0() to setup and enable timer0
+     * and ConfigTimer1() to setup and enable timer1
+     */
     ConfigSysTick();
-    ConfigTimers();
+    ConfigTimer0();
     current_time = 0;
 
-//    char str[4];
-//    uint interval = GetSysTime();
-////    UARTprintf("exeexeexeexeexerci");
-//    GrStringDraw(&sContext, "H", -1, 48, 46, 1);
-//    interval = GetSysTime() - interval;
-
-
+    uint number_of_loops = 0;
+    char str1[5], str2[5], str3[5];
     while(1)
     {
+    	/*
+    	 * UART as Critical Section Area.
+    	 */
+    	if ((prevtime != HWREG(NVIC_ST_CURRENT))&&(number_of_loops < 100000)) {
+    		prevtime = HWREG(NVIC_ST_CURRENT);
+			ROM_IntMasterDisable();
+			UARTprintf("e");
+			ROM_IntMasterEnable();
+    	}
+
+    	/* Use the commented out if statements
+		 * to use the GrStringDraw as critical section as done in my report.
+		 */
       if (prevtime != HWREG(NVIC_ST_CURRENT)) {
+//	  if ((number_of_loops >= 100001) && (number_of_loops < 100002)) {
           prevtime = HWREG(NVIC_ST_CURRENT);
-          char str1[5], str2[5], str3[5];
+
           ROM_IntMasterDisable();
-          usprintf(str1, "%d",timings[0]);
-          usprintf(str2, "%d",timings[1]);
-          usprintf(str3, "%d",timings[2]/timings[3]);
+          usprintf(str1, "%d",measurements[0]);
+          ROM_IntMasterEnable();
+          ROM_IntMasterDisable();
+          usprintf(str2, "%d",measurements[1]);
+          ROM_IntMasterEnable();
+          ROM_IntMasterDisable();
+          usprintf(str3, "%d",measurements[2]/measurements[3]);
+          ROM_IntMasterEnable();
           // Clear Screen
-          sRect.i16YMax = 63;
+          sRect.i16YMax = GrContextDpyHeightGet(&sContext)-1;
           GrContextForegroundSet(&sContext, ClrBlack);
+          ROM_IntMasterDisable();
           GrRectFill(&sContext, &sRect);
+          ROM_IntMasterEnable();
           // Display results
           GrContextForegroundSet(&sContext, ClrWhite);
+          ROM_IntMasterDisable();
           GrStringDraw(&sContext, str1, -1, 40, 22, 1);
+          ROM_IntMasterEnable();
+          ROM_IntMasterDisable();
           GrStringDraw(&sContext, str2, -1, 40, 34, 1);
+          ROM_IntMasterEnable();
+          ROM_IntMasterDisable();
           GrStringDraw(&sContext, str3, -1, 40, 46, 1);
           ROM_IntMasterEnable();
       }
-    }
+	  number_of_loops++;
+   }
 }
