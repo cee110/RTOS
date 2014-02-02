@@ -71,10 +71,14 @@ __error__(char *pcFilename, uint32_t ui32Line)
 }
 #endif
 
+//*****************************************************************************
 //
-// The interrupt handler function.
+// Patches that were needed.
 //
-extern void SysTickIntHandler(void);
+//*****************************************************************************
+#if __STDC_VERSION__ < 199901L
+#define restrict /* nothing */
+#endif
 
 //*****************************************************************************
 //
@@ -433,7 +437,7 @@ main(void)
      * and ConfigTimer1() to setup and enable timer1
      */
     ConfigSysTick();
-    ConfigTimer0();
+    ConfigTimer1();
     current_time = 0;
 
     uint number_of_loops = 0;
@@ -453,8 +457,8 @@ main(void)
     	/* Use the commented out if statements
 		 * to use the GrStringDraw as critical section as done in my report.
 		 */
-      if (prevtime != HWREG(NVIC_ST_CURRENT)) {
-//	  if ((number_of_loops >= 100001) && (number_of_loops < 100002)) {
+//      if (prevtime != HWREG(NVIC_ST_CURRENT)) {
+	  if ((number_of_loops >= 100001) && (number_of_loops < 100002)) {
           prevtime = HWREG(NVIC_ST_CURRENT);
 
           ROM_IntMasterDisable();
