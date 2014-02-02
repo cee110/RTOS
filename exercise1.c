@@ -21,7 +21,8 @@
 // This is part of revision 2.0.1.11577 of the EK-LM4F232 Firmware Package.
 //
 //*****************************************************************************
-#include "mypatch.h"
+#include "inc/hw_nvic.h"
+#include "inc/hw_types.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include "inc/hw_memmap.h"
@@ -76,11 +77,9 @@ extern void SysTickIntHandler(void);
 // Counter to count the number of interrupts that have been called.
 //
 //*****************************************************************************
-volatile uint32_t mytime = 0;
-volatile uint32_t testime = 0;
+volatile uint32_t current_time = 0;
 volatile uint32_t prevtime = 0;
-uint resolution = 1000;
-uint32_t systick_period;
+const uint32_t systick_period = 50000;
 tContext sContext;
 //*****************************************************************************
 //
@@ -125,28 +124,12 @@ ConfigureUART(void)
 void
 SysTickIntHandler(void)
 {
-    mytime++;
-    testime = SysTickValueGet();
-    SysTickDisable();
-    char str[4];
-    usprintf(str, "%d",testime);
-          ROM_IntMasterDisable();
-          GrStringDraw(&sContext, str, -1, 48,
-                       46, 1);
+    current_time++;
 }
 
-//*****************************************************************************
-//
-// Custom Timer Function. Returns the current time in us.
-//
-//*****************************************************************************
-uint
+uint32_t
 GetSysTime() {
-    //Convert tick count to time
-    uint tick = (mytime + 1) * systick_period;
-    tick -= SysTickValueGet();
-    // one tick is 0.02us
-    return tick;// * 0.02;
+	return systick_period * (current_time + 1) - HWREG(NVIC_ST_CURRENT);
 }
 //*****************************************************************************
 //
@@ -211,15 +194,6 @@ main(void)
                          GrContextDpyWidthGet(&sContext) / 2, 10, 0);
 
     //
-    // Say exercise1 using the Computer Modern 40 point font.
-    //
-//    GrContextFontSet(&sContext, g_psFontCm12/*g_psFontFixed6x8*/);
-//    GrStringDrawCentered(&sContext, "exercise1", -1,
-//                         GrContextDpyWidthGet(&sContext) / 2,
-//                         ((GrContextDpyHeightGet(&sContext) - 24) / 2) + 24,
-//                         0);
-
-    //
     // Flush any cached drawing operations.
     //
     GrFlush(&sContext);
@@ -229,7 +203,7 @@ main(void)
     //
     // Initialize the interrupt counter.
     //
-    mytime = 0;
+    current_time = 0;
     //
     // Register the interrupt handler function for interrupt 5.
     //
@@ -238,7 +212,6 @@ main(void)
     //
     // Set up the period for the SysTick timer(Resolution 1us).
     //
-    systick_period = SysCtlClockGet()/resolution;
     SysTickPeriodSet(systick_period);
 
     //
@@ -255,42 +228,20 @@ main(void)
     // Enable SysTick.
     //
     SysTickEnable();
-//    char str[4];
-
-//  //Calculate time to output char on LCD
-//    uint starttime = GetSysTime();
-//    GrStringDraw(&sContext, "H", -1, 48, 46, 1);//881us, 43902ticks
-//    uint endtime = GetSysTime();
-
-    //Calculate time to output via UART
-    // 242ticks for one char, 50 ticks for additional char.
-    /** Uart uses 16 byte buffer i.e 16 char fifo buffer.
-     * each stage of the pipeline takes 50 clocks.
-     * The first 17 chars take 1042 i.e 242 + 50*16 clocks
-     * 18th char takes an additional 3356. This time is used by the fifo
-     * which shows busy while it empties. Why first 17 not 16?
-     */
-//  uint starttime = GetSysTime();
-  UARTprintf("Helliaqwuerting0r");
-//  uint endtime = GetSysTime();
-//
-//
-//    // Display results
-//    usprintf(str, "%d",endtime-starttime);
-//    ROM_IntMasterDisable();
-//    GrStringDraw(&sContext, str, -1, 48,
-//                 46, 1);
-//    ROM_IntMasterEnable();
+    char str[4];
+    uint interval = GetSysTime();
+//    UARTprintf("exeexeexeexeexerci");
+    GrStringDraw(&sContext, "H", -1, 48, 46, 1);
+    interval = GetSysTime() - interval;
 
     while(1)
     {
-//      if (prevtime != mytime) {
-//          prevtime = mytime;
-//          usprintf(str, "%d",GetSysTime());
-//          ROM_IntMasterDisable();
-//          GrStringDraw(&sContext, str, -1, 48,
-//                       46, 1);
-//          ROM_IntMasterEnable();
-//      }
+      if (prevtime != HWREG(NVIC_ST_CURRENT)) {
+          prevtime = HWREG(NVIC_ST_CURRENT);
+          usprintf(str, "%d", interval);
+          ROM_IntMasterDisable();
+          GrStringDraw(&sContext, str, -1, 48, 46, 1);
+          ROM_IntMasterEnable();
+      }
     }
 }
