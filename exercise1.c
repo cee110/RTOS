@@ -163,7 +163,7 @@ Timer0IntHandler(void)
     HWREGBITW(&g_ui32Flags, 0) ^= 1;
     // Get Minimum.
     if (temptime < timings[0]) {
-    	timings[0]  = temptime;
+    	timings[0] = (temptime == 0)? timings[0]:temptime;
     }
     // Get Maximum.
     if (temptime > timings[1]) {
