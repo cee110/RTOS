@@ -234,7 +234,7 @@ Timer1IntHandler(void)
 //    entrytime = (current_time + 1) * systick_period - entrytime;
 
     if (prev_entrytime != 0) {
-    	jitter = (entrytime - prev_entrytime)%timer1_period;
+    	jitter = abs((int)((entrytime - prev_entrytime)-timer1_period))%systick_period;
 		// Get Minimum.
 		if (jitter < measurements[0]) {
 			measurements[0] = jitter;
@@ -429,30 +429,31 @@ main(void)
      * and ConfigTimer1() to setup and enable timer1
      */
     ConfigSysTick();
-    ConfigTimer0();
+    ConfigTimer1();
     current_time = 0;
 
     uint number_of_loops = 0;
     char str1[5], str2[5], str3[5];
     while(1)
     {
-    	/*
+    	/**************************
     	 * UART as Critical Section Area.
-    	 */
+    	 **************************/
 //    	if ((prevtime != HWREG(NVIC_ST_CURRENT))&&(number_of_loops < 100000)) {
 //    		prevtime = HWREG(NVIC_ST_CURRENT);
-			ROM_IntMasterDisable();
-			UARTprintf("e");
-			ROM_IntMasterEnable();
+//			ROM_IntMasterDisable();
+//			UARTprintf("e");
+//			ROM_IntMasterEnable();
 //    	}
 
-    	/* Use the commented out if statements
+    	/*************************************
+    	 * Use the commented out if statements
+    	 * and comment out the IntMasterEnable() statements
 		 * to use the GrStringDraw as critical section as done in my report.
-		 */
+		 *************************************/
 //      if (prevtime != HWREG(NVIC_ST_CURRENT)) {
 	  if (number_of_loops == 100000) {
           prevtime = HWREG(NVIC_ST_CURRENT);
-
           ROM_IntMasterDisable();
           usprintf(str1, "%d",measurements[0]);
           ROM_IntMasterEnable();
