@@ -79,7 +79,7 @@ extern void SysTickIntHandler(void);
 //*****************************************************************************
 volatile uint32_t current_time = 0;
 volatile uint32_t prevtime = 0;
-const uint32_t systick_period = 50000;
+const uint32_t systick_period = 3000;
 tContext sContext;
 //*****************************************************************************
 //
@@ -124,11 +124,16 @@ ConfigureUART(void)
 void
 SysTickIntHandler(void)
 {
-    current_time++;
+	if (HWREG(NVIC_ST_CTRL) & NVIC_ST_CTRL_COUNT){}
+	current_time++;
 }
 
 uint32_t
 GetSysTime() {
+	// Wrap around has occurred but the ISR hasn't been called.
+	if ((HWREG(NVIC_ST_CTRL) & NVIC_ST_CTRL_COUNT) != 0) {
+		current_time++;
+	}
 	return systick_period * (current_time + 1) - HWREG(NVIC_ST_CURRENT);
 }
 //*****************************************************************************
@@ -230,15 +235,19 @@ main(void)
     SysTickEnable();
     char str[4];
     uint interval = GetSysTime();
-//    UARTprintf("exeexeexeexeexerci");
-    GrStringDraw(&sContext, "H", -1, 48, 46, 1);
+    ROM_IntMasterDisable();
+    UARTprintf("ex");
+//    GrStringDraw(&sContext, "H", -1, 48, 46, 1);
+    ROM_IntMasterEnable();
+    uint temp = 3;
+    temp++;
     interval = GetSysTime() - interval;
 
     while(1)
     {
-      if (prevtime != HWREG(NVIC_ST_CURRENT)) {
-          prevtime = HWREG(NVIC_ST_CURRENT);
-          usprintf(str, "%d", interval);
+      if (prevtime != GetSysTime()) {
+          prevtime = GetSysTime();
+          usprintf(str, "%d",interval);
           ROM_IntMasterDisable();
           GrStringDraw(&sContext, str, -1, 48, 46, 1);
           ROM_IntMasterEnable();
