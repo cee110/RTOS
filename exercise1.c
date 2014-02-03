@@ -170,14 +170,18 @@ ConfigureUART(void)
 void
 SysTickIntHandler(void)
 {
-    current_time++;
+	if (HWREG(NVIC_ST_CTRL) & NVIC_ST_CTRL_COUNT){}
+	current_time++;
 }
 
 uint32_t
 GetSysTime() {
+	// Wrap around has occurred but the ISR hasn't been called.
+	if ((HWREG(NVIC_ST_CTRL) & NVIC_ST_CTRL_COUNT) != 0) {
+		current_time++;
+	}
 	return systick_period * (current_time + 1) - HWREG(NVIC_ST_CURRENT);
 }
-
 //*****************************************************************************
 //
 // The interrupt handler for the first timer interrupt.
@@ -197,7 +201,7 @@ Timer0IntHandler(void)
     HWREGBITW(&g_ui32Flags, 0) ^= 1;
     // Get Minimum.
     if (latency < measurements[0]) {
-    	measurements[0] = (latency == 0)? measurements[0]:latency;
+    	measurements[0] = latency;
     }
     // Get Maximum.
     if (latency > measurements[1]) {
@@ -213,11 +217,10 @@ Timer0IntHandler(void)
 // The interrupt handler for the second timer level 2 interrupt.
 //
 //*****************************************************************************
-#pragma GCC optimize("O1")
 void
 Timer1IntHandler(void)
 {
-	uint entrytime = HWREG(NVIC_ST_CURRENT);
+	uint entrytime = GetSysTime();
 	uint jitter;
     //
     // Clear the timer interrupt.
@@ -228,31 +231,21 @@ Timer1IntHandler(void)
     //
     HWREGBITW(&g_ui32Flags, 1) ^= 1;
 
-    entrytime = (current_time + 1) * systick_period - entrytime;
+//    entrytime = (current_time + 1) * systick_period - entrytime;
 
     if (prev_entrytime != 0) {
-    	jitter = entrytime - prev_entrytime - timer1_period;
-    	 /*
-    	  * +ve Jitter only. Can be negative due to wrap around
-    	  * of SysTick that has not been updated. If optimise flag
-    	  * is not included, comment out this
-    	  * if statement to find minimum jitter. To find maximum,
-    	  * uncomment it. The compile's optimisation affects
-    	  * the results.
-    	  */
-    	if ((int)jitter >= 0 ) {
-    		// Get Minimum.
-    	    if (jitter < measurements[0]) {
-    	    	measurements[0] = jitter;
-    	    }
-    	    // Get Maximum.
-    	    if (jitter > measurements[1]) {
-    	    	measurements[1]  = jitter;
-    	    }
-    	    // Accummulate Average.
-    	    measurements[2]+= jitter;
-    	    measurements[3]++;
-    	}
+    	jitter = (entrytime - prev_entrytime)%timer1_period;
+		// Get Minimum.
+		if (jitter < measurements[0]) {
+			measurements[0] = jitter;
+		}
+		// Get Maximum.
+		if (jitter > measurements[1]) {
+			measurements[1]  = jitter;
+		}
+		// Accummulate Average.
+		measurements[2]+= jitter;
+		measurements[3]++;
     }
     prev_entrytime = entrytime;
 }
@@ -268,7 +261,7 @@ ConfigTimer0() {
 	TimerIntRegister(TIMER0_BASE, TIMER_A, Timer0IntHandler);
 	// Set the priority of the Timers
 	// Set Timer0 as level 1 priority
-	IntPrioritySet(INT_TIMER0A, 1);
+	IntPrioritySet(INT_TIMER0A, 0x20);
 
 	// Enable the timer peripherals.
 	//
@@ -301,7 +294,7 @@ ConfigTimer1() {
 	TimerIntRegister(TIMER1_BASE, TIMER_A, Timer1IntHandler);
 	// Set the priority of the Timers
 	// Set Timer1 as level 2 priority
-	IntPrioritySet(INT_TIMER1A, 2);
+	IntPrioritySet(INT_TIMER1A, 0x40);
 	// Enable the timer peripherals.
 	//
 	ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
@@ -335,7 +328,7 @@ ConfigSysTick() {
 	SysTickIntRegister(SysTickIntHandler);
 
 	// Set SysTick Priority to level 3
-	IntPrioritySet(FAULT_SYSTICK,3);
+	IntPrioritySet(FAULT_SYSTICK,0x60);
 
 	//
 	// Set up the period for the SysTick timer(Resolution 1us).
@@ -436,7 +429,7 @@ main(void)
      * and ConfigTimer1() to setup and enable timer1
      */
     ConfigSysTick();
-    ConfigTimer1();
+    ConfigTimer0();
     current_time = 0;
 
     uint number_of_loops = 0;
@@ -446,18 +439,18 @@ main(void)
     	/*
     	 * UART as Critical Section Area.
     	 */
-    	if ((prevtime != HWREG(NVIC_ST_CURRENT))&&(number_of_loops < 100000)) {
-    		prevtime = HWREG(NVIC_ST_CURRENT);
+//    	if ((prevtime != HWREG(NVIC_ST_CURRENT))&&(number_of_loops < 100000)) {
+//    		prevtime = HWREG(NVIC_ST_CURRENT);
 			ROM_IntMasterDisable();
 			UARTprintf("e");
 			ROM_IntMasterEnable();
-    	}
+//    	}
 
     	/* Use the commented out if statements
 		 * to use the GrStringDraw as critical section as done in my report.
 		 */
-      if (prevtime != HWREG(NVIC_ST_CURRENT)) {
-//	  if ((number_of_loops >= 100001) && (number_of_loops < 100002)) {
+//      if (prevtime != HWREG(NVIC_ST_CURRENT)) {
+	  if (number_of_loops == 100000) {
           prevtime = HWREG(NVIC_ST_CURRENT);
 
           ROM_IntMasterDisable();
