@@ -456,8 +456,8 @@ main(void)
     	/* Use the commented out if statements
 		 * to use the GrStringDraw as critical section as done in my report.
 		 */
-//      if (prevtime != HWREG(NVIC_ST_CURRENT)) {
-	  if ((number_of_loops >= 100001) && (number_of_loops < 100002)) {
+      if (prevtime != HWREG(NVIC_ST_CURRENT)) {
+//	  if ((number_of_loops >= 100001) && (number_of_loops < 100002)) {
           prevtime = HWREG(NVIC_ST_CURRENT);
 
           ROM_IntMasterDisable();
@@ -470,6 +470,9 @@ main(void)
           usprintf(str3, "%d",measurements[2]/measurements[3]);
           ROM_IntMasterEnable();
           // Clear Screen
+          sRect.i16XMin = 0;
+          sRect.i16YMin = 0;
+          sRect.i16XMax = GrContextDpyWidthGet(&sContext) - 1;
           sRect.i16YMax = GrContextDpyHeightGet(&sContext)-1;
           GrContextForegroundSet(&sContext, ClrBlack);
           ROM_IntMasterDisable();
