@@ -1,4 +1,4 @@
-RTOS_EX1
+RTOS_EX1 (Grade: A)
 ========
 
 This code invsetigates the use of timers and their interrupts in the ARM Cortex M4 processor.
